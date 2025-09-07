@@ -21,7 +21,7 @@ interface SellFormProps {
   formData: SellFormData;
   onClose: () => void;
   onSubmit: (data: SellFormData) => void;
-  onChange: (field: keyof SellFormData, value: any) => void;
+  onChange: (field: keyof SellFormData, value: unknown) => void;
 }
 
 export function SellForm({

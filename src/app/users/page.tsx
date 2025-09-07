@@ -43,7 +43,7 @@ function CustomNoRowsOverlay() {
         No hay usuarios registrados
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Agregue un nuevo usuario usando el botón "Nuevo usuario"
+        Agregue un nuevo usuario usando el botón &quot;Nuevo usuario&quot;
       </Typography>
     </Box>
   );

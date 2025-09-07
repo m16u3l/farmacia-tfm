@@ -21,7 +21,7 @@ interface OrderFormProps {
   formData: OrderFormData;
   onClose: () => void;
   onSubmit: (data: OrderFormData) => void;
-  onChange: (field: keyof OrderFormData, value: any) => void;
+  onChange: (field: keyof OrderFormData, value: unknown) => void;
 }
 
 export function OrderForm({

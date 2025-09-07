@@ -76,7 +76,7 @@ export default function EmployeesPage() {
       const data = await response.json();
       setEmployees(data);
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("Error al cargar los empleados");
       setLoading(false);
     }
@@ -158,7 +158,7 @@ export default function EmployeesPage() {
     setIsEditing(false);
   };
 
-  const handleFormChange = (field: keyof EmployeeFormData, value: any) => {
+  const handleFormChange = (field: keyof EmployeeFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
