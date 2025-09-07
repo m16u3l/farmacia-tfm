@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
 
-export async function GET(request: NextResponse, { params }) {
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
 	try {
 		const client = await pool.connect();
 		try {
-			const result = await client.query("SELECT * FROM products WHERE product_id = $1", [params.product_id]);
+			const result = await client.query("SELECT * FROM products WHERE product_id = $1", [params.id]);
 			if (result.rows.length === 0) {
 				return NextResponse.json({ message: "Producto no encontrado" }, { status: 404 });
 			}
@@ -14,11 +18,15 @@ export async function GET(request: NextResponse, { params }) {
 			client.release();
 		}
 	} catch (error) {
-		return NextResponse.json({ error: error.message }, { status: 500 });
+		return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 	}
 }
 
-export async function PUT(request: NextResponse, { params }) {
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
 	try {
 		const body = await request.json();
 		const {
@@ -45,11 +53,15 @@ export async function PUT(request: NextResponse, { params }) {
 			client.release();
 		}
 	} catch (error) {
-		return NextResponse.json({ error: error.message }, { status: 500 });
+		return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 	}
 }
 
-export async function DELETE(request: NextResponse, { params }) {
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
 	try {
 		const client = await pool.connect();
 		try {
@@ -59,6 +71,6 @@ export async function DELETE(request: NextResponse, { params }) {
 			client.release();
 		}
 	} catch (error) {
-		return NextResponse.json({ error: error.message }, { status: 500 });
+		return NextResponse.json({ error: (error as Error).message }, { status: 500 });
 	}
 }

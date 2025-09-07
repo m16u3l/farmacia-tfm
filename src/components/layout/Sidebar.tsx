@@ -56,7 +56,7 @@ export function Sidebar() {
         }}
       >
         <DrawerHeader>
-          <Typography variant="h6">Quimifarm</Typography>
+          <Typography variant="h6">BioFarm</Typography>
         </DrawerHeader>
         <List>
           {menuItems.map((item) => (

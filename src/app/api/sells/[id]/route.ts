@@ -3,8 +3,9 @@ import { pool } from "@/config/db";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const [sells] = await pool.query(`SELECT * FROM sells WHERE id = ?`, [
       params.id,
@@ -35,8 +36,9 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const data = await request.json();
     const { customer_id, employee_id, payment_method, items } = data;
@@ -105,8 +107,9 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     // Iniciar transacción
     await pool.beginTransaction();
