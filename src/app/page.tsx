@@ -1,103 +1,216 @@
-import Image from "next/image";
+"use client";
+
+import {
+  Container,
+  Typography,
+  Paper,
+  Box,
+  Grid,
+  Card,
+  CardContent,
+  Button,
+} from "@mui/material";
+import LocalPharmacyIcon from "@mui/icons-material/LocalPharmacy";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+
+const features = [
+  {
+    title: "Medicamentos de Calidad",
+    description:
+      "Ofrecemos una amplia variedad de medicamentos certificados y productos de salud.",
+    icon: <LocalPharmacyIcon fontSize="large" color="primary" />,
+  },
+  {
+    title: "Atención Personalizada",
+    description:
+      "Nuestro equipo está listo para asesorarte y cuidar de tu bienestar.",
+    icon: <FavoriteIcon fontSize="large" color="primary" />,
+  },
+  {
+    title: "Envíos Rápidos",
+    description: "Recibe tus productos en casa de forma segura y eficiente.",
+    icon: <LocalShippingIcon fontSize="large" color="primary" />,
+  },
+];
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <Container
+      maxWidth="lg"
+      sx={{
+        py: 4,
+        display: "flex",
+        flexDirection: "column",
+        flexGrow: 1,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          width: "100%",
+          p: { xs: 2, sm: 3, md: 5 },
+          textAlign: "center",
+          background: "transparent",
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+        }}
+      >
+        <Box sx={{ mb: 6 }}>
+          <LocalPharmacyIcon
+            sx={{
+              fontSize: { xs: 60, sm: 80, md: 100 },
+              color: "primary.main",
+              mb: 2,
+            }}
+          />
+          <Typography
+            variant="h2"
+            component="h1"
+            gutterBottom
+            sx={{
+              fontWeight: "bold",
+              color: "primary.main",
+              fontSize: { xs: "2.5rem", sm: "3.5rem", md: "4rem" },
+            }}
+          >
+            BioFarm
+          </Typography>
+          <Typography
+            variant="h5"
+            component="h2"
+            color="textSecondary"
+            sx={{
+              maxWidth: "800px",
+              mx: "auto",
+              fontSize: { xs: "1.2rem", sm: "1.5rem" },
+            }}
+          >
+            Tu farmacia de confianza. Cuidamos de ti y de tu familia con
+            productos de calidad y atención profesional.
+          </Typography>
+        </Box>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <Grid
+          container
+          spacing={{ xs: 2, md: 4 }}
+          sx={{
+            mb: { xs: 4, md: 6 },
+            justifyContent: "center",
+          }}
+        >
+          {features.map((feature) => (
+            <Grid component={Box} key={feature.title}>
+              <Card
+                elevation={2}
+                sx={{
+                  width: 300,
+                  height: 280,
+                  display: "flex",
+                  flexDirection: "column",
+                  transition:
+                    "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
+                  "&:hover": {
+                    transform: "translateY(-5px)",
+                    boxShadow: (theme) => theme.shadows[8],
+                  },
+                }}
+              >
+                <CardContent
+                  sx={{
+                    textAlign: "center",
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    p: 3,
+                    justifyContent: "center",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      mb: 2,
+                      "& .MuiSvgIcon-root": {
+                        fontSize: "3rem",
+                      },
+                    }}
+                  >
+                    {feature.icon}
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    component="h3"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    {feature.title}
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    color="textSecondary"
+                    sx={{
+                      lineHeight: 1.6,
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {feature.description}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+
+        <Box
+          sx={{
+            mt: { xs: 4, md: 8 },
+            p: { xs: 3, md: 4 },
+            bgcolor: "primary.main",
+            color: "white",
+            borderRadius: 2,
+            maxWidth: "1000px",
+            mx: "auto",
+          }}
+        >
+          <Typography
+            variant="h4"
+            gutterBottom
+            sx={{
+              fontWeight: "bold",
+              fontSize: { xs: "1.5rem", sm: "2rem" },
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Sobre BioFarm
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              maxWidth: "800px",
+              mx: "auto",
+              lineHeight: 1.8,
+              fontSize: { xs: "1rem", sm: "1.1rem" },
+            }}
           >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            En BioFarm nos dedicamos a cuidar la salud de nuestra comunidad.
+            Ofrecemos medicamentos, productos de cuidado personal y asesoría
+            profesional para que tú y tu familia estén siempre protegidos.
+            ¡Visítanos y descubre por qué somos tu farmacia de confianza!
+          </Typography>
+          <Button
+            variant="contained"
+            color="secondary"
+            sx={{ mt: 3, fontWeight: "bold", fontSize: "1.1rem" }}
+            href="#"
+          >
+            Ver catálogo
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
   );
 }
