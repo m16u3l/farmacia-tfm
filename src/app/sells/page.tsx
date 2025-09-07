@@ -43,7 +43,7 @@ export default function SellsPage() {
       const data = await response.json();
       setSells(data);
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("Error al cargar las ventas");
       setLoading(false);
     }

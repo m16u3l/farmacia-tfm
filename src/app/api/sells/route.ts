@@ -64,7 +64,7 @@ export async function POST(request: Request) {
       }
 
       // Actualizar el total de la venta
-      const total = items.reduce((sum: number, item: any) => sum + item.subtotal, 0);
+      const total = items.reduce((sum: number, item: { subtotal: number }) => sum + item.subtotal, 0);
       await client.query(
         `UPDATE sells
          SET total_amount = $1

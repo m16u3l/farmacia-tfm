@@ -10,7 +10,7 @@ export interface Product {
   status: boolean;
 }
 
-export type ProductFormData = Partial<Product>;
+export type ProductFormData = Omit<Product, 'product_id'>;
 
 export const DOSAGE_FORMS = [
   'tableta',

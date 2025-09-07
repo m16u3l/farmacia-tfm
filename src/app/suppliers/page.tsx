@@ -44,7 +44,7 @@ export default function SuppliersPage() {
       const data = await response.json();
       setSuppliers(data);
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("Error al cargar los proveedores");
       setLoading(false);
     }

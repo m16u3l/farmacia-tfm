@@ -12,4 +12,4 @@ export interface Inventory {
   product?: Product;  // For joined queries
 }
 
-export interface InventoryFormData extends Omit<Inventory, 'inventory_id' | 'product'> {}
+export type InventoryFormData = Omit<Inventory, 'inventory_id' | 'product'>;

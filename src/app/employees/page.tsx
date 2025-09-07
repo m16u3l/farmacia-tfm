@@ -43,7 +43,7 @@ function CustomNoRowsOverlay() {
         No hay empleados registrados
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Agregue un nuevo empleado usando el botón "Nuevo empleado"
+        Agregue un nuevo empleado usando el botón &quot;Nuevo empleado&quot;
       </Typography>
     </Box>
   );

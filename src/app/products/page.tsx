@@ -14,11 +14,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Product, ProductFormData } from "@/types/products";
-import {
-  formatDisplayDate,
-  formatInputDate,
-  parseInputDate,
-} from "@/utils/dateUtils";
+// Date utilities removed as they're not used
 import { ProductForm } from "@/components/products/ProductForm";
 import { useProducts } from "@/hooks/useProducts";
 
@@ -52,7 +48,7 @@ export default function ProductsPage() {
       const data = await response.json();
       setProducts(data);
       setLoading(false);
-    } catch (err) {
+    } catch {
       setError("Error al cargar los productos");
       setLoading(false);
     }

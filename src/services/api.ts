@@ -1,6 +1,6 @@
 type RequestOptions = {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  body?: any;
+  body?: unknown;
 };
 
 export async function apiRequest<T>(endpoint: string, options?: RequestOptions): Promise<T> {

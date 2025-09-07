@@ -7,4 +7,4 @@ export interface Employee {
   phone?: string | null;
 }
 
-export interface EmployeeFormData extends Omit<Employee, 'employee_id'> {}
+export type EmployeeFormData = Omit<Employee, 'employee_id'>;

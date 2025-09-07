@@ -75,7 +75,7 @@ export async function PUT(
 
       // Actualizar el total
       const total = items.reduce(
-        (sum: any, item: any) => sum + item.subtotal,
+        (sum: number, item: { subtotal: number }) => sum + item.subtotal,
         0
       );
       await pool.query(
