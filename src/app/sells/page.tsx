@@ -86,7 +86,7 @@ export default function SellsPage() {
 
   const handleFormChange = (
     field: keyof SellFormData,
-    value: string | number | null
+    value: unknown
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
