@@ -22,7 +22,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextResponse) {
+export async function POST(request: Request) {
   try {
     const data = await request.json();
     const {
