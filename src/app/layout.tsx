@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Box, CssBaseline } from "@mui/material";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import ThemeRegistry from "@/components/ThemeRegistry/ThemeRegistry";
 import { CronInitializer } from "@/components/CronInitializer";
 import moment from "moment";
@@ -36,25 +35,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <CssBaseline />
         <ThemeRegistry>
           <CronInitializer />
-          <Box sx={{ display: "flex", minHeight: "100vh" }}>
-            <Sidebar />
-            <Box
-              component="main"
-              sx={{
-                flexGrow: 1,
-                p: { xs: 2, sm: 3 },
-                width: { sm: `calc(100% - 240px)` },
-                overflow: "auto",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              {children}
-            </Box>
-          </Box>
+          <ResponsiveLayout>
+            {children}
+          </ResponsiveLayout>
         </ThemeRegistry>
       </body>
     </html>

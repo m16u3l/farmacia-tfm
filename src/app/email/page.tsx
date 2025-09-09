@@ -63,10 +63,10 @@ export default function EmailPage() {
   };
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: 3, maxWidth: 600, mx: "auto" }}>
-        <Typography variant="h4" gutterBottom>
-          Enviar Correo
+    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, maxWidth: 600, mx: "auto" }}>
+        <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+          Enviar Correo Electrónico
         </Typography>
 
         <form onSubmit={handleSubmit}>
@@ -106,12 +106,18 @@ export default function EmailPage() {
           <Button
             type="submit"
             variant="contained"
-            fullWidth
-            size="large"
             disabled={loading}
+            sx={{ 
+              mt: 2,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: { xs: '100%', sm: 'auto' }
+            }}
           >
             {loading ? (
-              <CircularProgress size={24} color="inherit" />
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                Enviando...
+              </>
             ) : (
               "Enviar Correo"
             )}

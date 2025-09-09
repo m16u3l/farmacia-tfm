@@ -145,52 +145,25 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const columns: GridColDef[] = [
-    { field: "product_id", headerName: "ID", flex: 0.5, minWidth: 80 },
-    { field: "name", headerName: "Nombre", flex: 1.2, minWidth: 150 },
-    {
-      field: "description",
-      headerName: "Descripción",
-      flex: 1.5,
-      minWidth: 200,
-    },
-    {
-      field: "category",
-      headerName: "Categoría",
-      flex: 1,
-      minWidth: 150,
-    },
-    {
-      field: "type",
-      headerName: "Tipo",
-      flex: 1,
-      minWidth: 150,
-    },
-    {
-      field: "dosage_form",
-      headerName: "Forma farmacéutica",
-      flex: 1,
-      minWidth: 150,
-    },
-    {
-      field: "unit",
-      headerName: "Unidad",
-      flex: 0.7,
-      minWidth: 100,
-    },
-    {
-      field: "barcode",
-      headerName: "Código de barras",
-      flex: 1,
-      minWidth: 120,
-    },
+    { field: "product_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
+    { field: "name", headerName: "Nombre", flex: 2, minWidth: 150 },
+    { field: "description", headerName: "Descripción", flex: 2.5, minWidth: 180 },
+    { field: "category", headerName: "Categoría", flex: 1.5, minWidth: 120 },
+    { field: "type", headerName: "Tipo", flex: 1, minWidth: 100 },
+    { field: "dosage_form", headerName: "Forma", flex: 1, minWidth: 100 },
+    { field: "unit", headerName: "Unidad", flex: 1, minWidth: 80 },
+    { field: "barcode", headerName: "Código", flex: 1.2, minWidth: 100 },
     {
       field: "status",
       headerName: "Estado",
-      flex: 0.7,
-      minWidth: 100,
-      renderCell: (params) => (
-        <Typography color={params.row.status ? "primary" : "error"}>
-          {params.row.status ? "Activo" : "Inactivo"}
+      flex: 1,
+      minWidth: 80,
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography 
+          color={params.value ? "success.main" : "error.main"}
+          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+        >
+          {params.value ? "Activo" : "Inactivo"}
         </Typography>
       ),
     },
@@ -224,15 +197,19 @@ export default function ProductsPage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: 3, mb: 4 }}>
+    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <Box
           display="flex"
           justifyContent="space-between"
           alignItems="center"
           mb={3}
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={{ xs: 2, sm: 0 }}
         >
-          <Typography variant="h4">Productos</Typography>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            Productos
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -240,11 +217,15 @@ export default function ProductsPage() {
               resetForm();
               setOpenDialog(true);
             }}
+            sx={{ 
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: { xs: '100%', sm: 'auto' }
+            }}
           >
             Nuevo producto
           </Button>
         </Box>
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={products}
             columns={columns}
@@ -254,15 +235,20 @@ export default function ProductsPage() {
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             sx={{
+              minWidth: 800,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "& .MuiDataGrid-cell": {
+                padding: { xs: '4px', sm: '8px' },
+              },
             }}
           />
         </Box>

@@ -114,15 +114,19 @@ export default function UsersPage() {
   }
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: 3 }}>
+    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <Box
           display="flex"
           justifyContent="space-between"
           alignItems="center"
           mb={3}
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={{ xs: 2, sm: 0 }}
         >
-          <Typography variant="h4">Usuarios</Typography>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            Usuarios
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -130,12 +134,16 @@ export default function UsersPage() {
               resetForm();
               setOpenDialog(true);
             }}
+            sx={{ 
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: { xs: '100%', sm: 'auto' }
+            }}
           >
             Nuevo usuario
           </Button>
         </Box>
 
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={users}
             columns={columns}
@@ -150,18 +158,23 @@ export default function UsersPage() {
               noRowsOverlay: CustomNoRowsOverlay,
             }}
             sx={{
+              minWidth: 600,
               "& .MuiDataGrid-cell:focus": {
                 outline: "none",
               },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": {
                 backgroundColor: "transparent",
+              },
+              "& .MuiDataGrid-cell": {
+                padding: { xs: '4px', sm: '8px' },
               },
             }}
           />
@@ -217,6 +230,8 @@ function useUsersColumns({
       headerName: "Acciones",
       flex: 0.7,
       minWidth: 120,
+      sortable: false,
+      filterable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", gap: 1 }}>
           <IconButton

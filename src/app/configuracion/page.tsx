@@ -85,9 +85,9 @@ export default function ConfiguracionPage() {
   }
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: 3, maxWidth: 600, mx: "auto" }}>
-        <Typography variant="h4" gutterBottom>
+    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, maxWidth: 600, mx: "auto" }}>
+        <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
           Configuración del Sistema
         </Typography>
 
@@ -107,11 +107,14 @@ export default function ConfiguracionPage() {
           <Button
             type="submit"
             variant="contained"
-            fullWidth
-            size="large"
             disabled={saving}
+            sx={{ 
+              mt: 2,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: { xs: '100%', sm: 'auto' }
+            }}
           >
-            {saving ? <CircularProgress size={24} /> : "Guardar Configuración"}
+            {saving ? "Guardando..." : "Guardar Configuración"}
           </Button>
         </form>
       </Paper>

@@ -24,10 +24,10 @@ export default function SellsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<SellFormData>({
-    customer_id: null,
+    customer_name: null,
     employee_id: null,
     payment_method: "efectivo",
-    total_amount: 0,
+    items: [],
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -55,10 +55,10 @@ export default function SellsPage() {
 
   const handleEdit = (sell: Sell) => {
     setFormData({
-      customer_id: sell.customer_id ?? null,
+      customer_name: sell.customer_name ?? null,
       employee_id: sell.employee_id ?? null,
       payment_method: sell.payment_method,
-      total_amount: sell.total_amount,
+      items: sell.items || [],
     });
     setIsEditing(true);
     setOpenDialog(true);
@@ -121,10 +121,10 @@ export default function SellsPage() {
 
   const resetForm = () => {
     setFormData({
-      customer_id: null,
+      customer_name: null,
       employee_id: null,
       payment_method: "efectivo",
-      total_amount: 0,
+      items: [],
     });
     setIsEditing(false);
   };
@@ -132,16 +132,26 @@ export default function SellsPage() {
   const [selectedSell, setSelectedSell] = useState<Sell | null>(null);
 
   const columns: GridColDef[] = [
-    { field: "sell_id", headerName: "ID", flex: 0.5, minWidth: 80 },
-    { field: "customer_id", headerName: "Cliente ID", flex: 0.8, minWidth: 100 },
-    { field: "employee_id", headerName: "Empleado ID", flex: 0.8, minWidth: 100 },
+    { field: "sell_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
+    { field: "customer_name", headerName: "Cliente", flex: 1.5, minWidth: 120 },
+    { 
+      field: "employee_name", 
+      headerName: "Empleado", 
+      flex: 1.5, 
+      minWidth: 120,
+      renderCell: (params) => (
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+          {params.row.employee_name || `ID: ${params.row.employee_id}`}
+        </Typography>
+      ),
+    },
     {
       field: "sell_date",
       headerName: "Fecha",
-      flex: 1,
-      minWidth: 120,
+      flex: 1.2,
+      minWidth: 100,
       renderCell: (params) => (
-        <Typography>
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
           {new Date(params.row.sell_date).toLocaleDateString()}
         </Typography>
       ),
@@ -149,21 +159,24 @@ export default function SellsPage() {
     {
       field: "total_amount",
       headerName: "Total",
-      flex: 0.8,
-      minWidth: 100,
+      flex: 1,
+      minWidth: 80,
       renderCell: (params) => (
-        <Typography>
-          ${params.row.total_amount?.toFixed(2) || "0.00"}
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 'bold' }}>
+          ${params.row.total_amount}
         </Typography>
       ),
     },
     {
       field: "payment_method",
-      headerName: "Método de Pago",
+      headerName: "Método",
       flex: 1,
-      minWidth: 120,
+      minWidth: 80,
       renderCell: (params) => (
-        <Typography sx={{ textTransform: "capitalize" }}>
+        <Typography sx={{ 
+          textTransform: "capitalize",
+          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+        }}>
           {params.row.payment_method}
         </Typography>
       ),
@@ -198,15 +211,19 @@ export default function SellsPage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: 3, mb: 4 }}>
+    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <Box
           display="flex"
           justifyContent="space-between"
           alignItems="center"
           mb={3}
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={{ xs: 2, sm: 0 }}
         >
-          <Typography variant="h4">Ventas</Typography>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            Ventas
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -214,11 +231,15 @@ export default function SellsPage() {
               resetForm();
               setOpenDialog(true);
             }}
+            sx={{ 
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: { xs: '100%', sm: 'auto' }
+            }}
           >
             Nueva venta
           </Button>
         </Box>
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={sells}
             columns={columns}
@@ -228,15 +249,20 @@ export default function SellsPage() {
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             sx={{
+              minWidth: 600,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "& .MuiDataGrid-cell": {
+                padding: { xs: '4px', sm: '8px' },
+              },
             }}
           />
         </Box>

@@ -94,21 +94,28 @@ export default function Home() {
           </Typography>
         </Box>
 
-        <Grid
-          container
-          spacing={{ xs: 2, md: 4 }}
+        <Box
           sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              md: "repeat(3, 1fr)",
+            },
+            gap: { xs: 2, md: 4 },
             mb: { xs: 4, md: 6 },
-            justifyContent: "center",
+            justifyItems: "center",
           }}
         >
           {features.map((feature) => (
-            <Grid component={Box} key={feature.title}>
-              <Card
+            <Card
+              key={feature.title}
                 elevation={2}
                 sx={{
-                  width: 300,
-                  height: 280,
+                  width: "100%",
+                  maxWidth: 300,
+                  height: { xs: 250, sm: 280 },
+                  mx: "auto",
                   display: "flex",
                   flexDirection: "column",
                   transition:
@@ -162,9 +169,8 @@ export default function Home() {
                   </Typography>
                 </CardContent>
               </Card>
-            </Grid>
           ))}
-        </Grid>
+        </Box>
 
         <Box
           sx={{

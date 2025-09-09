@@ -10,6 +10,9 @@ export interface Inventory {
   purchase_price: number;
   sale_price: number;
   product?: Product;  // For joined queries
+  product_name?: string;  // For joined queries
+  product_description?: string;  // For joined queries
+  product_category?: string;  // For joined queries
 }
 
 export type InventoryFormData = Omit<Inventory, 'inventory_id' | 'product'>;

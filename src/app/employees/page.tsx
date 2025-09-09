@@ -180,15 +180,19 @@ export default function EmployeesPage() {
   }
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: 3 }}>
+    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <Box
           display="flex"
           justifyContent="space-between"
           alignItems="center"
           mb={3}
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={{ xs: 2, sm: 0 }}
         >
-          <Typography variant="h4">Empleados</Typography>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            Empleados
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -196,52 +200,54 @@ export default function EmployeesPage() {
               resetForm();
               setOpenDialog(true);
             }}
+            sx={{ 
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: { xs: '100%', sm: 'auto' }
+            }}
           >
             Nuevo empleado
           </Button>
         </Box>
-
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={employees}
             columns={columns}
             getRowId={(row) => row.employee_id}
-            initialState={{
-              pagination: { paginationModel: { pageSize: 10 } },
-            }}
+            loading={loading}
+            autoHeight
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
-            loading={loading}
             slots={{
               noRowsOverlay: CustomNoRowsOverlay,
             }}
             sx={{
-              "& .MuiDataGrid-cell:focus": {
-                outline: "none",
-              },
+              minWidth: 900,
+              "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
-              "& .MuiDataGrid-overlay": {
-                backgroundColor: "transparent",
+              "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "& .MuiDataGrid-cell": {
+                padding: { xs: '4px', sm: '8px' },
               },
             }}
           />
         </Box>
-
-        <EmployeeForm
-          open={openDialog}
-          isEditing={isEditing}
-          formData={formData}
-          onClose={() => setOpenDialog(false)}
-          onSubmit={handleSubmit}
-          onChange={handleFormChange}
-        />
       </Paper>
+
+      <EmployeeForm
+        open={openDialog}
+        isEditing={isEditing}
+        formData={formData}
+        onClose={() => setOpenDialog(false)}
+        onSubmit={handleSubmit}
+        onChange={handleFormChange}
+      />
 
       <Snackbar
         open={snackbar.open}
@@ -268,42 +274,49 @@ function useEmployeesColumns({
   onEdit: (employee: Employee) => void;
   onDelete: (id: number) => void;
 }): GridColDef[] {
-  return [
+  const columns: GridColDef[] = [
+    { field: "employee_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
+    { field: "first_name", headerName: "Nombre", flex: 1.5, minWidth: 120 },
+    { field: "last_name", headerName: "Apellido", flex: 1.5, minWidth: 120 },
+    { field: "email", headerName: "Email", flex: 2, minWidth: 160 },
+    { field: "phone", headerName: "Teléfono", flex: 1.5, minWidth: 120 },
+    { field: "position", headerName: "Cargo", flex: 1.5, minWidth: 120 },
+    { field: "department", headerName: "Depto", flex: 1.2, minWidth: 100 },
     {
-      field: "employee_id",
-      headerName: "ID",
-      flex: 0.5,
-      minWidth: 70,
-    },
-    {
-      field: "first_name",
-      headerName: "Nombre",
-      flex: 1,
-      minWidth: 130,
-    },
-    {
-      field: "last_name",
-      headerName: "Apellidos",
-      flex: 1,
-      minWidth: 130,
-    },
-    {
-      field: "role",
-      headerName: "Cargo",
-      flex: 1,
-      minWidth: 130,
-    },
-    {
-      field: "email",
-      headerName: "Correo",
+      field: "hire_date",
+      headerName: "Contratación",
       flex: 1.5,
-      minWidth: 200,
+      minWidth: 120,
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+          {new Date(params.value).toLocaleDateString()}
+        </Typography>
+      ),
     },
     {
-      field: "phone",
-      headerName: "Teléfono",
+      field: "salary",
+      headerName: "Salario",
+      flex: 1.2,
+      minWidth: 100,
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 'bold' }}>
+          ${params.value?.toFixed(2) || "0.00"}
+        </Typography>
+      ),
+    },
+    {
+      field: "status",
+      headerName: "Estado",
       flex: 1,
-      minWidth: 120,
+      minWidth: 80,
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography 
+          color={params.value ? "success.main" : "error.main"}
+          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+        >
+          {params.value ? "Activo" : "Inactivo"}
+        </Typography>
+      ),
     },
     {
       field: "actions",
@@ -330,4 +343,6 @@ function useEmployeesColumns({
       ),
     },
   ];
+  
+  return columns;
 }

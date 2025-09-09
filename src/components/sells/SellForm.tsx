@@ -9,11 +9,12 @@ import {
   IconButton,
   Box,
   Typography,
+  Autocomplete,
 } from "@mui/material";
-import { SellFormData, SellItem, PaymentMethod } from "@/types";
+import { SellFormData, SellItem, PaymentMethod, Inventory, Employee } from "@/types";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SellFormProps {
   open: boolean;
@@ -32,6 +33,10 @@ export function SellForm({
   onSubmit,
   onChange,
 }: SellFormProps) {
+  const [inventory, setInventory] = useState<Inventory[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedInventory, setSelectedInventory] = useState<Inventory | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [newItem, setNewItem] = useState<Partial<SellItem>>({
     inventory_id: 0,
     quantity: 1,
@@ -39,17 +44,68 @@ export function SellForm({
     subtotal: 0,
   });
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch inventory
+        const inventoryResponse = await fetch('/api/inventory');
+        const inventoryData = await inventoryResponse.json();
+        setInventory(inventoryData.filter((item: Inventory) => item.quantity_available > 0));
+        
+        // Fetch employees
+        const employeesResponse = await fetch('/api/employees');
+        const employeesData = await employeesResponse.json();
+        setEmployees(employeesData);
+        
+        // Set default employee (first one) if not editing
+        if (!isEditing && employeesData.length > 0) {
+          const firstEmployee = employeesData[0];
+          setSelectedEmployee(firstEmployee);
+          onChange('employee_id', firstEmployee.employee_id);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    if (open) {
+      fetchData();
+    }
+  }, [open, isEditing, onChange]);
+
+  // Set selected employee when editing
+  useEffect(() => {
+    if (isEditing && formData.employee_id && employees.length > 0) {
+      const employee = employees.find(emp => emp.employee_id === formData.employee_id);
+      setSelectedEmployee(employee || null);
+    }
+  }, [isEditing, formData.employee_id, employees]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
   const addItem = () => {
-    if (newItem.inventory_id && newItem.quantity && newItem.unit_price) {
+    if (selectedInventory && newItem.quantity && newItem.unit_price) {
+      // Verificar que no exceda el stock disponible
+      if (newItem.quantity > selectedInventory.quantity_available) {
+        alert(`Stock insuficiente. Disponible: ${selectedInventory.quantity_available}`);
+        return;
+      }
+      
       const subtotal = newItem.quantity * newItem.unit_price;
-      const item = { ...newItem, subtotal } as SellItem;
+      const item: SellItem = {
+        sell_item_id: 0,
+        sell_id: 0,
+        inventory_id: selectedInventory.inventory_id,
+        quantity: newItem.quantity,
+        unit_price: newItem.unit_price,
+        subtotal: subtotal,
+        inventory: selectedInventory
+      };
       onChange("items", [...(formData.items || []), item]);
       setNewItem({ inventory_id: 0, quantity: 1, unit_price: 0, subtotal: 0 });
+      setSelectedInventory(null);
     }
   };
 
@@ -76,23 +132,32 @@ export function SellForm({
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
             <TextField
               margin="dense"
-              label="Cliente ID"
-              type="number"
-              value={formData.customer_id ?? ""}
+              label="Nombre del Cliente"
+              type="text"
+              value={formData.customer_name ?? ""}
               onChange={(e) =>
-                onChange("customer_id", parseInt(e.target.value))
+                onChange("customer_name", e.target.value)
               }
               fullWidth
+              placeholder="Ingrese el nombre del cliente"
             />
-            <TextField
-              margin="dense"
-              label="Empleado ID"
-              type="number"
-              value={formData.employee_id ?? ""}
-              onChange={(e) =>
-                onChange("employee_id", parseInt(e.target.value))
-              }
+            <Autocomplete
+              options={employees}
+              getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
+              value={selectedEmployee}
+              onChange={(_, newValue) => {
+                setSelectedEmployee(newValue);
+                onChange('employee_id', newValue?.employee_id || null);
+              }}
               fullWidth
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  margin="dense"
+                  label="Empleado" 
+                  fullWidth
+                />
+              )}
             />
             <TextField
               select
@@ -128,11 +193,11 @@ export function SellForm({
               }}
             >
               <TextField
-                label="Inventario ID"
-                type="number"
-                value={item.inventory_id}
+                label="Producto"
+                value={item.inventory?.product_name || `ID: ${item.inventory_id}`}
                 disabled
                 size="small"
+                sx={{ minWidth: 150 }}
               />
               <TextField
                 label="Cantidad"
@@ -166,14 +231,23 @@ export function SellForm({
           ))}
 
           <Box sx={{ display: "flex", gap: 1, alignItems: "center", mt: 2 }}>
-            <TextField
-              label="Inventario ID"
-              type="number"
-              value={newItem.inventory_id}
-              onChange={(e) =>
-                setNewItem({ ...newItem, inventory_id: parseInt(e.target.value) })
-              }
-              size="small"
+            <Autocomplete
+              options={inventory}
+              getOptionLabel={(option) => `${option.product_name || 'Producto'} - Stock: ${option.quantity_available}`}
+              value={selectedInventory}
+              onChange={(_, newValue) => {
+                setSelectedInventory(newValue);
+                if (newValue) {
+                  setNewItem({
+                    ...newItem,
+                    inventory_id: newValue.inventory_id,
+                    unit_price: newValue.sale_price || 0
+                  });
+                }
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Producto" size="small" sx={{ minWidth: 200 }} />
+              )}
             />
             <TextField
               label="Cantidad"
@@ -191,12 +265,12 @@ export function SellForm({
               type="number"
               value={newItem.unit_price}
               onChange={(e) => {
-                const unit_price = parseFloat(e.target.value);
+                const unit_price = parseFloat(e.target.value) || 0;
                 const subtotal = (newItem.quantity || 0) * unit_price;
                 setNewItem({ ...newItem, unit_price, subtotal });
               }}
               size="small"
-              inputProps={{ step: "0.01" }}
+              inputProps={{ step: "0.01", min: "0" }}
             />
             <TextField
               label="Subtotal"
@@ -205,7 +279,12 @@ export function SellForm({
               disabled
               size="small"
             />
-            <IconButton color="primary" onClick={addItem} size="small">
+            <IconButton 
+              color="primary" 
+              onClick={addItem} 
+              size="small"
+              disabled={!selectedInventory || !newItem.quantity || newItem.quantity <= 0}
+            >
               <AddIcon />
             </IconButton>
           </Box>

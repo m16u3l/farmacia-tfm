@@ -53,7 +53,7 @@ export default function SuppliersPage() {
   useEffect(() => {
     fetchSuppliers();
   }, []);
-
+  
   const handleEdit = (supplier: Supplier) => {
     setFormData({
       name: supplier.name ?? "",
@@ -135,44 +135,25 @@ export default function SuppliersPage() {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
   const columns: GridColDef[] = [
-    { field: "supplier_id", headerName: "ID", flex: 0.5, minWidth: 80 },
-    { field: "name", headerName: "Nombre", flex: 1.2, minWidth: 150 },
-    {
-      field: "contact_name",
-      headerName: "Contacto",
-      flex: 1,
-      minWidth: 150,
-    },
-    {
-      field: "phone",
-      headerName: "Teléfono",
-      flex: 1,
-      minWidth: 120,
-    },
-    {
-      field: "email",
-      headerName: "Email",
-      flex: 1.5,
-      minWidth: 200,
-    },
-    {
-      field: "address",
-      headerName: "Dirección",
-      flex: 1.5,
-      minWidth: 200,
-    },
+    { field: "supplier_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
+    { field: "name", headerName: "Nombre", flex: 2, minWidth: 150 },
+    { field: "contact_name", headerName: "Contacto", flex: 1.8, minWidth: 140 },
+    { field: "phone", headerName: "Teléfono", flex: 1.5, minWidth: 120 },
+    { field: "email", headerName: "Email", flex: 2, minWidth: 160 },
+    { field: "address", headerName: "Dirección", flex: 2.5, minWidth: 180 },
     {
       field: "actions",
       headerName: "Acciones",
       flex: 0.7,
       minWidth: 120,
+      sortable: false,
+      filterable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", gap: 1 }}>
           <IconButton
             color="primary"
             size="small"
             onClick={() => {
-              setSelectedSupplier(params.row);
               handleEdit(params.row);
             }}
           >
@@ -191,15 +172,19 @@ export default function SuppliersPage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: 3, mb: 4 }}>
+    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <Box
           display="flex"
           justifyContent="space-between"
           alignItems="center"
           mb={3}
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={{ xs: 2, sm: 0 }}
         >
-          <Typography variant="h4">Proveedores</Typography>
+          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+            Proveedores
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -207,11 +192,15 @@ export default function SuppliersPage() {
               resetForm();
               setOpenDialog(true);
             }}
+            sx={{ 
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              width: { xs: '100%', sm: 'auto' }
+            }}
           >
             Nuevo proveedor
           </Button>
         </Box>
-        <Box sx={{ width: "100%" }}>
+        <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={suppliers}
             columns={columns}
@@ -221,15 +210,20 @@ export default function SuppliersPage() {
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             sx={{
+              minWidth: 700,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "& .MuiDataGrid-cell": {
+                padding: { xs: '4px', sm: '8px' },
+              },
             }}
           />
         </Box>

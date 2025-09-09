@@ -1,33 +1,40 @@
-import { Inventory, InventoryFormData } from '@/types';
 import { apiRequest } from './api';
+import { Inventory, InventoryFormData } from '@/types';
 
-export function useInventory() {
-  const getInventoryItems = () => apiRequest<Inventory[]>('/api/inventory');
+export const inventoryService = {
+  async getAll(): Promise<Inventory[]> {
+    return apiRequest<Inventory[]>('/api/inventory');
+  },
 
-  const getInventoryItem = (id: number) => apiRequest<Inventory>(`/api/inventory/${id}`);
+  async getById(id: number): Promise<Inventory> {
+    return apiRequest<Inventory>(`/api/inventory/${id}`);
+  },
 
-  const createInventoryItem = (data: InventoryFormData) =>
-    apiRequest<Inventory>('/api/inventory', {
+  async create(data: InventoryFormData): Promise<Inventory> {
+    return apiRequest<Inventory>('/api/inventory', {
       method: 'POST',
-      body: data,
+      body: data
     });
+  },
 
-  const updateInventoryItem = (id: number, data: Partial<InventoryFormData>) =>
-    apiRequest<Inventory>(`/api/inventory/${id}`, {
+  async update(id: number, data: InventoryFormData): Promise<Inventory> {
+    return apiRequest<Inventory>(`/api/inventory/${id}`, {
       method: 'PUT',
-      body: data,
+      body: data
     });
+  },
 
-  const deleteInventoryItem = (id: number) =>
-    apiRequest<void>(`/api/inventory/${id}`, {
-      method: 'DELETE',
+  async delete(id: number): Promise<void> {
+    await apiRequest<void>(`/api/inventory/${id}`, {
+      method: 'DELETE'
     });
+  },
 
-  return {
-    getInventoryItems,
-    getInventoryItem,
-    createInventoryItem,
-    updateInventoryItem,
-    deleteInventoryItem,
-  };
-}
+  async getByProduct(productId: number): Promise<Inventory[]> {
+    return apiRequest<Inventory[]>(`/api/inventory?product_id=${productId}`);
+  },
+
+  async getLowStock(threshold: number = 10): Promise<Inventory[]> {
+    return apiRequest<Inventory[]>(`/api/inventory?low_stock=${threshold}`);
+  }
+};

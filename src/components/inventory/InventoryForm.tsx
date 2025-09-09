@@ -5,23 +5,25 @@ import {
   DialogActions,
   TextField,
   Button,
+  MenuItem,
 } from "@mui/material";
-import { InventoryFormData } from "@/types";
-import { formatInputDate } from "@/utils/dateUtils";
+import { InventoryFormData, Product } from "@/types";
 
 interface InventoryFormProps {
   open: boolean;
   isEditing: boolean;
   formData: InventoryFormData;
+  products: Product[];
   onClose: () => void;
   onSubmit: (data: InventoryFormData) => void;
-  onChange: (field: keyof InventoryFormData, value: string | number) => void;
+  onChange: (field: keyof InventoryFormData, value: string | number | null) => void;
 }
 
 export function InventoryForm({
   open,
   isEditing,
   formData,
+  products,
   onClose,
   onSubmit,
   onChange,
@@ -39,15 +41,21 @@ export function InventoryForm({
         </DialogTitle>
         <DialogContent>
           <TextField
+            select
             autoFocus
             margin="dense"
-            label="ID del Producto"
-            type="number"
+            label="Producto"
             fullWidth
-            value={formData.product_id}
-            onChange={(e) => onChange("product_id", parseInt(e.target.value))}
+            value={formData.product_id || ""}
+            onChange={(e) => onChange("product_id", e.target.value ? parseInt(e.target.value) : null)}
             required
-          />
+          >
+            {products.map((product) => (
+              <MenuItem key={product.product_id} value={product.product_id}>
+                {product.name} - {product.category}
+              </MenuItem>
+            ))}
+          </TextField>
           <TextField
             margin="dense"
             label="Número de Lote"
@@ -60,7 +68,7 @@ export function InventoryForm({
             label="Fecha de Vencimiento"
             type="date"
             fullWidth
-            value={formData.expiry_date ? formatInputDate(formData.expiry_date) : ""}
+            value={formData.expiry_date ? formData.expiry_date.split('T')[0] : ""}
             onChange={(e) => onChange("expiry_date", e.target.value)}
             InputLabelProps={{ shrink: true }}
           />

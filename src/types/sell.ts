@@ -5,8 +5,9 @@ export type PaymentMethod = 'efectivo' | 'tarjeta' | 'seguro' | 'transferencia';
 
 export interface Sell {
   sell_id: number;
-  customer_id?: number | null;
+  customer_name?: string | null;
   employee_id?: number | null;
+  employee_name?: string;  // For joined queries
   sell_date: string;
   total_amount: number;
   payment_method: PaymentMethod;
@@ -24,4 +25,9 @@ export interface SellItem {
   inventory?: Inventory;  // For joined queries
 }
 
-export type SellFormData = Partial<Sell>;
+export interface SellFormData {
+  customer_name?: string | null;
+  employee_id?: number | null;
+  payment_method: PaymentMethod;
+  items?: SellItem[];
+}
