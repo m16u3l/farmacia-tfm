@@ -46,7 +46,15 @@ export function OrderForm({
       try {
         const response = await fetch("/api/products");
         const data = await response.json();
-        setProducts(data);
+        if (!response.ok) {
+          console.error("Error al cargar productos:", data);
+          setProducts([]);
+        } else if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error("Respuesta inesperada del servidor al cargar productos:", data);
+          setProducts([]);
+        }
       } catch (error) {
         console.error("Error al cargar productos:", error);
       }

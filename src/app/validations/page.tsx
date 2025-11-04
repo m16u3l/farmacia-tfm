@@ -117,7 +117,15 @@ export default function ValidationsPage() {
     try {
   const response = await fetch("/api/inventory");
   const data = await response.json();
-  setInventory(data);
+  if (!response.ok) {
+    console.error("Error al cargar inventario:", data);
+    setInventory([]);
+  } else if (Array.isArray(data)) {
+    setInventory(data);
+  } else {
+    console.error("Respuesta inesperada del servidor al cargar inventario:", data);
+    setInventory([]);
+  }
     } catch (error) {
       console.error("Error al cargar inventario:", error);
     }
@@ -127,7 +135,15 @@ export default function ValidationsPage() {
     try {
       const response = await fetch("/api/products");
       const data = await response.json();
-      setProducts(data);
+      if (!response.ok) {
+        console.error("Error al cargar productos:", data);
+        setProducts([]);
+      } else if (Array.isArray(data)) {
+        setProducts(data);
+      } else {
+        console.error("Respuesta inesperada del servidor al cargar productos:", data);
+        setProducts([]);
+      }
     } catch (error) {
       console.error("Error al cargar productos:", error);
     }
@@ -137,6 +153,17 @@ export default function ValidationsPage() {
     try {
       const response = await fetch("/api/sells");
       const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Error al cargar ventas diarias:", data);
+        setDailySales([]);
+        return;
+      }
+      if (!Array.isArray(data)) {
+        console.error("Respuesta inesperada al cargar ventas diarias:", data);
+        setDailySales([]);
+        return;
+      }
 
       // Agrupar ventas por día
       const salesByDay: { [key: string]: DailySales } = {};
@@ -177,6 +204,17 @@ export default function ValidationsPage() {
     try {
       const response = await fetch("/api/sells");
       const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Error al cargar ventas mensuales:", data);
+        setMonthlySales([]);
+        return;
+      }
+      if (!Array.isArray(data)) {
+        console.error("Respuesta inesperada al cargar ventas mensuales:", data);
+        setMonthlySales([]);
+        return;
+      }
 
       // Agrupar ventas por mes
       const salesByMonth: { [key: string]: MonthlySales } = {};

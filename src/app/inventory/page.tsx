@@ -49,7 +49,15 @@ export default function InventoryPage() {
     try {
       const response = await fetch("/api/inventory");
       const data = await response.json();
-      setInventory(data);
+      if (!response.ok) {
+        setError(typeof data === "object" && data?.error ? String((data as any).error) : "Error al cargar el inventario");
+        setInventory([]);
+      } else if (Array.isArray(data)) {
+        setInventory(data);
+      } else {
+        setError("Respuesta inesperada del servidor al cargar inventario");
+        setInventory([]);
+      }
       setLoading(false);
     } catch {
       setError("Error al cargar el inventario");
@@ -61,7 +69,15 @@ export default function InventoryPage() {
     try {
       const response = await fetch("/api/products");
       const data = await response.json();
-      setProducts(data);
+      if (!response.ok) {
+        console.error("Error al cargar productos:", data);
+        setProducts([]);
+      } else if (Array.isArray(data)) {
+        setProducts(data);
+      } else {
+        console.error("Respuesta inesperada del servidor al cargar productos:", data);
+        setProducts([]);
+      }
     } catch {
       console.error("Error al cargar productos");
     }

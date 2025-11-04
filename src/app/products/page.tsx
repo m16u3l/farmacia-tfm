@@ -46,7 +46,15 @@ export default function ProductsPage() {
     try {
       const response = await fetch("/api/products");
       const data = await response.json();
-      setProducts(data);
+      if (!response.ok) {
+        setError(typeof data === "object" && data?.error ? String((data as any).error) : "Error al cargar los productos");
+        setProducts([]);
+      } else if (Array.isArray(data)) {
+        setProducts(data);
+      } else {
+        setError("Respuesta inesperada del servidor al cargar productos");
+        setProducts([]);
+      }
       setLoading(false);
     } catch {
       setError("Error al cargar los productos");
