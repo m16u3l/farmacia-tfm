@@ -2,23 +2,24 @@ import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
 
 export async function GET() {
+  const client = await pool.connect();
   try {
-    const client = await pool.connect();
-    try {
-      const result = await client.query(`
-        SELECT * FROM suppliers 
-        ORDER BY supplier_id DESC
-      `);
-      return NextResponse.json(result.rows);
-    } finally {
-      client.release();
+    const result = await client.query(`
+      SELECT * FROM suppliers 
+      ORDER BY supplier_id DESC
+    `);
+    if (!result.rows) {
+      return NextResponse.json([], { status: 200 });
     }
+    return NextResponse.json(result.rows);
   } catch (error) {
     console.error("Error fetching suppliers:", error);
     return NextResponse.json(
-      { error: "Error al obtener los proveedores" },
+      { error: error instanceof Error ? error.message : "Error al obtener los proveedores" },
       { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }
 

@@ -50,7 +50,7 @@ export default function InventoryPage() {
       const response = await fetch("/api/inventory");
       const data = await response.json();
       if (!response.ok) {
-        setError(typeof data === "object" && data?.error ? String((data as any).error) : "Error al cargar el inventario");
+        setError(typeof data === "object" && data && "error" in data ? String(data.error) : "Error al cargar el inventario");
         setInventory([]);
       } else if (Array.isArray(data)) {
         setInventory(data);

@@ -3,8 +3,9 @@ import { pool } from "@/config/db";
 
 // GET - Obtener todas las órdenes
 export async function GET() {
+  const client = await pool.connect();
   try {
-    const result = await pool.query(`
+    const result = await client.query(`
       SELECT 
         o.*,
         s.name as supplier_name
@@ -13,13 +14,18 @@ export async function GET() {
       ORDER BY o.order_date DESC
     `);
     
+    if (!result.rows) {
+      return NextResponse.json([], { status: 200 });
+    }
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error("Error al obtener órdenes:", error);
     return NextResponse.json(
-      { error: "Error al obtener órdenes" },
+      { error: error instanceof Error ? error.message : "Error al obtener órdenes" },
       { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }
 
