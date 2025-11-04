@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
 
 // GET - Obtener una orden específica
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, context: unknown) {
+  const { params } = context as { params: { id: string } };
   try {
     const id = params.id;
 
@@ -53,10 +51,8 @@ export async function GET(
 }
 
 // PUT - Actualizar orden
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, context: unknown) {
+  const { params } = context as { params: { id: string } };
   try {
     const id = params.id;
     const body = await request.json();
@@ -118,10 +114,8 @@ export async function PUT(
 }
 
 // DELETE - Eliminar orden
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, context: unknown) {
+  const { params } = context as { params: { id: string } };
   try {
     const id = params.id;
     const client = await pool.connect();

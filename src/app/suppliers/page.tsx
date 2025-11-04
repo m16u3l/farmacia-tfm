@@ -62,6 +62,7 @@ export default function SuppliersPage() {
       email: supplier.email ?? "",
       address: supplier.address ?? "",
     });
+    setSelectedSupplier(supplier);
     setIsEditing(true);
     setOpenDialog(true);
   };
@@ -130,6 +131,7 @@ export default function SuppliersPage() {
       address: "",
     });
     setIsEditing(false);
+    setSelectedSupplier(null);
   };
 
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);

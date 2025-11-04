@@ -66,7 +66,7 @@ export const mockApiResponse = {
 }
 
 // Mock fetch responses
-export const createMockFetchResponse = (data: any, status = 200) => ({
+export const createMockFetchResponse = (data: unknown, status = 200) => ({
   ok: status >= 200 && status < 300,
   status,
   json: async () => data,

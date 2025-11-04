@@ -89,10 +89,10 @@ export default function OrdersPage() {
       const fullOrder = await response.json();
       
       // Transformar items para que coincidan con OrderFormData
-      const formattedItems = (fullOrder.items || []).map((item: any) => ({
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
+      const formattedItems = (fullOrder.items || []).map((item: Record<string, unknown>) => ({
+        product_id: Number(item.product_id),
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
       }));
       
       setIsEditing(true);
@@ -222,7 +222,14 @@ export default function OrdersPage() {
     return supplier ? supplier.name : `Proveedor ${supplierId}`;
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string):
+    | "default"
+    | "primary"
+    | "secondary"
+    | "error"
+    | "info"
+    | "success"
+    | "warning" => {
     switch (status) {
       case "pendiente":
         return "warning";
@@ -250,7 +257,7 @@ export default function OrdersPage() {
       headerName: "Proveedor",
       flex: 2,
       minWidth: 150,
-      valueGetter: (params) => getSupplierName(params),
+  valueGetter: (params: { row: Record<string, unknown> }) => getSupplierName(Number(params.row?.supplier_id)),
     },
     {
       field: "order_date",
@@ -270,8 +277,8 @@ export default function OrdersPage() {
       minWidth: 120,
       renderCell: (params: GridRenderCellParams) => (
         <Chip
-          label={params.value.toUpperCase()}
-          color={getStatusColor(params.value) as any}
+          label={String(params.value ?? "").toUpperCase()}
+          color={getStatusColor(String(params.value ?? ""))}
           size="small"
           sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 'bold' }}
         />

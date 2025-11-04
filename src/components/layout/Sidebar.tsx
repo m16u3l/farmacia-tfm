@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -8,10 +7,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import IconButton from "@mui/material/IconButton";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import MenuIcon from "@mui/icons-material/Menu";
+
 import { styled, useTheme } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
 import InventoryIcon from "@mui/icons-material/Inventory";
@@ -21,7 +17,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import HomeIcon from "@mui/icons-material/Home";
 import PeopleIcon from "@mui/icons-material/People";
-import SettingsIcon from "@mui/icons-material/Settings";
+
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import Link from "next/link";
 

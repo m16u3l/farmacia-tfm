@@ -24,12 +24,10 @@ import {
   DialogContent,
   DialogActions,
   Checkbox,
-  IconButton,
   Snackbar,
+  ChipProps,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import WarningIcon from "@mui/icons-material/Warning";
-import ErrorIcon from "@mui/icons-material/Error";
 import DownloadIcon from "@mui/icons-material/Download";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
@@ -93,7 +91,7 @@ export default function ValidationsPage() {
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().slice(0, 7)
   );
-  const [loading, setLoading] = useState(true);
+  // loading state removed (not used in UI)
   const [verificationMode, setVerificationMode] = useState(false);
   const [verificationRecords, setVerificationRecords] = useState<
     Map<number, VerificationRecord>
@@ -117,13 +115,11 @@ export default function ValidationsPage() {
 
   const fetchInventory = async () => {
     try {
-      const response = await fetch("/api/inventory");
-      const data = await response.json();
-      setInventory(data);
-      setLoading(false);
+  const response = await fetch("/api/inventory");
+  const data = await response.json();
+  setInventory(data);
     } catch (error) {
       console.error("Error al cargar inventario:", error);
-      setLoading(false);
     }
   };
 
@@ -145,11 +141,10 @@ export default function ValidationsPage() {
       // Agrupar ventas por día
       const salesByDay: { [key: string]: DailySales } = {};
 
-      data.forEach((sale: any) => {
+      data.forEach((sale: Record<string, unknown>) => {
         // Validar que la fecha sea válida
         if (!sale.sale_date) return;
-        
-        const saleDate = new Date(sale.sale_date);
+        const saleDate = new Date(String(sale.sale_date));
         if (isNaN(saleDate.getTime())) return; // Saltar fechas inválidas
         
         const date = saleDate.toISOString().split("T")[0];
@@ -164,8 +159,8 @@ export default function ValidationsPage() {
         }
 
         salesByDay[date].total_sales += 1;
-        salesByDay[date].total_amount += parseFloat(sale.total_amount || 0);
-        salesByDay[date].products_sold += parseInt(sale.quantity || 0);
+        salesByDay[date].total_amount += parseFloat(String(sale.total_amount || 0));
+        salesByDay[date].products_sold += parseInt(String(sale.quantity || 0));
       });
 
       const salesArray = Object.values(salesByDay).sort(
@@ -186,8 +181,8 @@ export default function ValidationsPage() {
       // Agrupar ventas por mes
       const salesByMonth: { [key: string]: MonthlySales } = {};
 
-      data.forEach((sale: any) => {
-        const date = new Date(sale.sale_date);
+      data.forEach((sale: Record<string, unknown>) => {
+        const date = new Date(String(sale.sale_date));
         const monthKey = `${date.getFullYear()}-${String(
           date.getMonth() + 1
         ).padStart(2, "0")}`;
@@ -210,10 +205,8 @@ export default function ValidationsPage() {
         }
 
         salesByMonth[monthKey].total_sales += 1;
-        salesByMonth[monthKey].total_amount += parseFloat(
-          sale.total_amount || 0
-        );
-        salesByMonth[monthKey].products_sold += parseInt(sale.quantity || 0);
+        salesByMonth[monthKey].total_amount += parseFloat(String(sale.total_amount || 0));
+        salesByMonth[monthKey].products_sold += parseInt(String(sale.quantity || 0));
       });
 
       const salesArray = Object.values(salesByMonth).sort(
@@ -465,7 +458,7 @@ export default function ValidationsPage() {
     a.click();
   };
 
-  const inventoryStats = {
+    const inventoryStats = {
     total: inventory.length,
     ok: inventory.filter((item) => getInventoryStatus(item).status === "ok").length,
     // Low stock should be counted regardless of expiry status
@@ -484,9 +477,7 @@ export default function ValidationsPage() {
   const filteredDailySales = dailySales.filter(
     (sale) => sale.date === selectedDate
   );
-  const filteredMonthlySales = monthlySales.filter((sale) =>
-    sale.month.includes(selectedMonth)
-  );
+  // filteredMonthlySales unused; removed
 
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
@@ -755,7 +746,7 @@ export default function ValidationsPage() {
                       <TableCell>
                         <Chip
                           label={status.label}
-                          color={status.color as any}
+                          color={status.color as ChipProps["color"]}
                           size="small"
                           sx={{ fontWeight: "bold" }}
                         />

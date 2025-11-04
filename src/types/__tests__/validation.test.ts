@@ -1,12 +1,13 @@
 // Test type validation and data structures
 describe('Data Validation', () => {
   describe('Product validation', () => {
-    const validateProduct = (product: any) => {
-      if (!product) return false
+    const validateProduct = (product: unknown) => {
+      if (!product || typeof product !== 'object') return false
+      const p = product as Record<string, unknown>
       return (
-        typeof product.name === 'string' &&
-        typeof product.price === 'number' &&
-        product.price > 0
+        typeof p.name === 'string' &&
+        typeof p.price === 'number' &&
+        (p.price as number) > 0
       )
     }
 
@@ -29,13 +30,14 @@ describe('Data Validation', () => {
   })
 
   describe('Employee validation', () => {
-    const validateEmployee = (employee: any) => {
+    const validateEmployee = (employee: unknown) => {
+      if (!employee || typeof employee !== 'object') return false
+      const e = employee as Record<string, unknown>
       return (
-        employee &&
-        typeof employee.first_name === 'string' &&
-        typeof employee.last_name === 'string' &&
-        typeof employee.email === 'string' &&
-        employee.email.includes('@')
+        typeof e.first_name === 'string' &&
+        typeof e.last_name === 'string' &&
+        typeof e.email === 'string' &&
+        (e.email as string).includes('@')
       )
     }
 
