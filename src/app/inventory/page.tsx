@@ -15,6 +15,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
+import EventBusyIcon from "@mui/icons-material/EventBusy";
 import { Inventory, InventoryFormData, Product } from "@/types";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { useInventory } from "@/hooks/useInventory";
@@ -173,12 +174,19 @@ export default function InventoryPage() {
   };
 
   const getProductName = (productId: number) => {
-    const product = products.find(p => p.product_id === productId);
-    return product ? product.name : `Producto ${productId}`;
+    const product = products.find(p => p.product_id == productId);
+    return product ? product.name : `${productId}`;
   };
 
   const isLowStock = (quantity: number) => {
     return quantity <= 10; // Consider low stock if 10 or fewer items
+  };
+
+  const isExpired = (expiryDate: string | null) => {
+    if (!expiryDate) return false;
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    return expiry < today;
   };
 
   const isAboutToExpire = (expiryDate: string | null) => {
@@ -186,7 +194,19 @@ export default function InventoryPage() {
     const today = new Date();
     const expiry = new Date(expiryDate);
     const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 30 && daysUntilExpiry >= 0; // About to expire within 30 days
+    return daysUntilExpiry <= 40 && daysUntilExpiry >= 0; // About to expire within 40 days
+  };
+
+  const getLowStockItems = () => {
+    return inventory.filter(item => isLowStock(item.quantity_available));
+  };
+
+  const getExpiringItems = () => {
+    return inventory.filter(item => item.expiry_date && isAboutToExpire(item.expiry_date));
+  };
+
+  const getExpiredItems = () => {
+    return inventory.filter(item => item.expiry_date && isExpired(item.expiry_date));
   };
 
   const columns: GridColDef[] = [
@@ -209,22 +229,43 @@ export default function InventoryPage() {
       headerName: "Vencimiento",
       flex: 1.5,
       minWidth: 120,
-      renderCell: (params: GridRenderCellParams) => (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-          <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-            {params.value ? new Date(params.value).toLocaleDateString() : "-"}
-          </Typography>
-          {params.value && isAboutToExpire(params.value) && (
-            <Chip
-              icon={<WarningIcon />}
-              label="Próximo"
-              color="error"
-              size="small"
-              sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
-            />
-          )}
-        </Box>
-      ),
+      renderCell: (params: GridRenderCellParams) => {
+        const expired = params.value && isExpired(params.value);
+        const aboutToExpire = params.value && !expired && isAboutToExpire(params.value);
+        
+        return (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                color: expired ? 'error.main' : 'inherit',
+                fontWeight: expired ? 'bold' : 'normal'
+              }}
+            >
+              {params.value ? new Date(params.value).toLocaleDateString() : "-"}
+            </Typography>
+            {expired && (
+              <Chip
+                icon={<WarningIcon />}
+                label="VENCIDO"
+                color="error"
+                size="small"
+                sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 'bold' }}
+              />
+            )}
+            {aboutToExpire && (
+              <Chip
+                icon={<WarningIcon />}
+                label="Próximo"
+                color="warning"
+                size="small"
+                sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
+              />
+            )}
+          </Box>
+        );
+      },
     },
     {
       field: "quantity_available",
@@ -321,6 +362,130 @@ export default function InventoryPage() {
             Agregar Item
           </Button>
         </Box>
+
+        {/* Alertas de bajo stock y vencimiento */}
+        {(getExpiredItems().length > 0 || getLowStockItems().length > 0 || getExpiringItems().length > 0) && (
+          <Box sx={{ mb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
+            {getExpiredItems().length > 0 && (
+              <Alert 
+                severity="error" 
+                icon={<WarningIcon />}
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  "& .MuiAlert-message": { width: "100%" },
+                  bgcolor: 'error.light',
+                  color: 'error.contrastText'
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                    🚨 Productos VENCIDOS ({getExpiredItems().length})
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                    {getExpiredItems().slice(0, 5).map(item => (
+                      <Chip
+                        key={item.inventory_id}
+                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : 'N/A'})`}
+                        size="small"
+                        sx={{ 
+                          bgcolor: 'error.dark',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          '& .MuiChip-label': { fontSize: { xs: '0.6rem', sm: '0.75rem' } }
+                        }}
+                      />
+                    ))}
+                    {getExpiredItems().length > 5 && (
+                      <Chip
+                        label={`+${getExpiredItems().length - 5} más`}
+                        size="small"
+                        sx={{ 
+                          bgcolor: 'error.dark',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          '& .MuiChip-label': { fontSize: { xs: '0.6rem', sm: '0.75rem' } }
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+              </Alert>
+            )}
+
+            {getLowStockItems().length > 0 && (
+              <Alert 
+                severity="warning" 
+                icon={<WarningIcon />}
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  "& .MuiAlert-message": { width: "100%" }
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                    ⚠️ Productos con bajo stock ({getLowStockItems().length})
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                    {getLowStockItems().slice(0, 5).map(item => (
+                      <Chip
+                        key={item.inventory_id}
+                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.quantity_available})`}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
+                    ))}
+                    {getLowStockItems().length > 5 && (
+                      <Chip
+                        label={`+${getLowStockItems().length - 5} más`}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+                </Box>
+              </Alert>
+            )}
+
+            {getExpiringItems().length > 0 && (
+              <Alert 
+                severity="warning" 
+                icon={<EventBusyIcon />}
+                sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  "& .MuiAlert-message": { width: "100%" }
+                }}
+              >
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                    📅 Productos próximos a vencer ({getExpiringItems().length})
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                    {getExpiringItems().slice(0, 5).map(item => (
+                      <Chip
+                        key={item.inventory_id}
+                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : 'N/A'})`}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
+                    ))}
+                    {getExpiringItems().length > 5 && (
+                      <Chip
+                        label={`+${getExpiringItems().length - 5} más`}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+                </Box>
+              </Alert>
+            )}
+          </Box>
+        )}
+
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={inventory}

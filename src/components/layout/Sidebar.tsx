@@ -22,6 +22,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import HomeIcon from "@mui/icons-material/Home";
 import PeopleIcon from "@mui/icons-material/People";
 import SettingsIcon from "@mui/icons-material/Settings";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 import Link from "next/link";
 
 const DrawerHeader = styled("div")(({ theme }) => ({
@@ -53,8 +54,7 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
     { text: "Empleados", icon: <PeopleIcon />, href: "/employees" },
     { text: "Proveedores", icon: <LocalShippingIcon />, href: "/suppliers" },
     { text: "Usuarios", icon: <PeopleIcon />, href: "/users" },
-    { text: "Configuración", icon: <SettingsIcon />, href: "/configuracion" },
-    { text: "Email", icon: <SettingsIcon />, href: "/email" },
+    { text: "Reportes", icon: <AssessmentIcon />, href: "/validations" },
   ];
 
   const drawerContent = (

@@ -281,29 +281,6 @@ function useEmployeesColumns({
     { field: "email", headerName: "Email", flex: 2, minWidth: 160 },
     { field: "phone", headerName: "Teléfono", flex: 1.5, minWidth: 120 },
     { field: "position", headerName: "Cargo", flex: 1.5, minWidth: 120 },
-    { field: "department", headerName: "Depto", flex: 1.2, minWidth: 100 },
-    {
-      field: "hire_date",
-      headerName: "Contratación",
-      flex: 1.5,
-      minWidth: 120,
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-          {new Date(params.value).toLocaleDateString()}
-        </Typography>
-      ),
-    },
-    {
-      field: "salary",
-      headerName: "Salario",
-      flex: 1.2,
-      minWidth: 100,
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 'bold' }}>
-          ${params.value?.toFixed(2) || "0.00"}
-        </Typography>
-      ),
-    },
     {
       field: "status",
       headerName: "Estado",
@@ -311,10 +288,10 @@ function useEmployeesColumns({
       minWidth: 80,
       renderCell: (params: GridRenderCellParams) => (
         <Typography 
-          color={params.value ? "success.main" : "error.main"}
+          color={params.value ? "error.main" : "success.main"}
           sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
         >
-          {params.value ? "Activo" : "Inactivo"}
+          {params.value ? "Inactivo": "Activo"}
         </Typography>
       ),
     },

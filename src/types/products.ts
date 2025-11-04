@@ -22,7 +22,8 @@ export const DOSAGE_FORMS = [
   'suspensión',
   'polvo',
   'gotas',
-  'spray'
+  'spray',
+  'otro'
 ] as const;
 
 export const PRODUCT_TYPES = [
