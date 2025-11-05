@@ -217,9 +217,10 @@ export default function OrdersPage() {
     }
   };
 
-  const getSupplierName = (supplierId: number) => {
-    const supplier = suppliers.find((s) => s.supplier_id === supplierId);
-    return supplier ? supplier.name : `Proveedor ${supplierId}`;
+  const getSupplierName = (supplierId: number | string | unknown) => {
+    console.log("suppliers", supplierId);
+    const supplier = suppliers.find((s) => s.supplier_id == supplierId);
+    return supplier ? supplier.name : `${supplierId}`;
   };
 
   const getStatusColor = (status: string):
@@ -257,7 +258,7 @@ export default function OrdersPage() {
       headerName: "Proveedor",
       flex: 2,
       minWidth: 150,
-  valueGetter: (params: { row: Record<string, unknown> }) => getSupplierName(Number(params.row?.supplier_id)),
+  valueGetter: (params: { row: Record<string, unknown> }) => getSupplierName(params),
     },
     {
       field: "order_date",

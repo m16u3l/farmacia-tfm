@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function GET() {
   const client = await pool.connect();
   try {
@@ -9,9 +19,9 @@ export async function GET() {
       ORDER BY supplier_id DESC
     `);
     if (!result.rows) {
-      return NextResponse.json([], { status: 200 });
+      return NextResponse.json([], { status: 200, headers: corsHeaders });
     }
-    return NextResponse.json(result.rows);
+    return NextResponse.json(result.rows, { headers: corsHeaders });
   } catch (error) {
     console.error("Error fetching suppliers:", error);
     return NextResponse.json(

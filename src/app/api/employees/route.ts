@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function GET() {
   try {
     const client = await pool.connect();
@@ -9,7 +19,10 @@ export async function GET() {
         SELECT * FROM employees 
         ORDER BY employee_id DESC
       `);
-      return NextResponse.json(result.rows);
+      if (!result.rows) {
+        return NextResponse.json([], { headers: corsHeaders });
+      }
+      return NextResponse.json(result.rows, { headers: corsHeaders });
     } finally {
       client.release();
     }
@@ -17,7 +30,7 @@ export async function GET() {
     console.error("Error fetching employees:", error);
     return NextResponse.json(
       { error: "Error al obtener los empleados" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -44,7 +57,7 @@ export async function POST(request: Request) {
         if (emailCheck.rows.length > 0) {
           return NextResponse.json(
             { error: "El correo electrónico ya está registrado" },
-            { status: 400 }
+            { status: 400, headers: corsHeaders }
           );
         }
       }
@@ -57,7 +70,7 @@ export async function POST(request: Request) {
         [first_name, last_name, email, phone, role]
       );
       
-      return NextResponse.json(result.rows[0]);
+      return NextResponse.json(result.rows[0], { headers: corsHeaders });
     } finally {
       client.release();
     }

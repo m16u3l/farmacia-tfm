@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function GET() {
   try {
     const client = await pool.connect();
@@ -31,7 +41,10 @@ export async function GET() {
         GROUP BY s.sell_id, e.first_name, e.last_name
         ORDER BY s.sell_date DESC
       `);
-      return NextResponse.json(result.rows);
+      if (!result.rows) {
+        return NextResponse.json([], { headers: corsHeaders });
+      }
+      return NextResponse.json(result.rows, { headers: corsHeaders });
     } finally {
       client.release();
     }
@@ -39,7 +52,7 @@ export async function GET() {
     console.error("Error fetching sells:", error);
     return NextResponse.json(
       { error: "Error al obtener las ventas" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
