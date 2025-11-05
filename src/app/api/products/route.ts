@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
 
+// Helper function for error responses with CORS
+const errorResponse = (error: unknown, message: string) => {
+  console.error(`API Error (${message}):`, error);
+  return NextResponse.json(
+    { 
+      error: message,
+      details: error instanceof Error ? error.message : String(error)
+    },
+    { status: 500, headers: corsHeaders }
+  );
+};
+
 // Helper function for CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,23 +25,41 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
-  const client = await pool.connect();
+  let client;
   try {
+    // Log connection attempt
+    console.log('Attempting to connect to database...');
+    client = await pool.connect();
+    console.log('Database connection successful');
+
+    // Perform query
     const result = await client.query(
       "SELECT * FROM products ORDER BY product_id DESC"
     );
+    console.log(`Query executed successfully. Found ${result.rows?.length ?? 0} products`);
+
     if (!result.rows) {
-      return NextResponse.json([], { status: 200, headers: corsHeaders });
+      return NextResponse.json([], { headers: corsHeaders });
     }
     return NextResponse.json(result.rows, { headers: corsHeaders });
   } catch (error) {
-    console.error("Error fetching products:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Error al obtener los productos" },
-      { status: 500 }
-    );
+    // Detailed error logging
+    if (error instanceof Error) {
+      console.error('Database error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        cause: error.cause
+      });
+    } else {
+      console.error('Unknown error type:', error);
+    }
+    return errorResponse(error, "Error al obtener los productos - verifique la conexión a la base de datos");
   } finally {
-    client.release();
+    if (client) {
+      console.log('Releasing database connection');
+      client.release();
+    }
   }
 }
 
