@@ -4,7 +4,8 @@ type RequestOptions = {
 };
 
 export async function apiRequest<T>(endpoint: string, options?: RequestOptions): Promise<T> {
-  const response = await fetch(endpoint, {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     method: options?.method || 'GET',
     headers: {
       'Content-Type': 'application/json',
