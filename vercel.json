@@ -1,0 +1,11 @@
+{
+  "installCommand": "corepack prepare pnpm@10.8.0 --activate && pnpm i",
+  "buildCommand": "pnpm build",
+  "cache": {
+    "paths": [
+      "node_modules/.pnpm",
+      ".next/cache",
+      ".pnpm-store"
+    ]
+  }
+}
