@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import ThemeRegistry from "@/components/ThemeRegistry/ThemeRegistry";
 import { CronInitializer } from "@/components/CronInitializer";
 import moment from "moment";
@@ -21,8 +20,9 @@ const geistMono = Geist_Mono({
 moment.locale("es");
 
 export const metadata: Metadata = {
-  title: "BioFarm - Farmacia y Salud",
-  description: "Sistema de gestión para farmacia BioFarm",
+  title: "BioFarm - Farmacia en Cochabamba | Salud y bienestar para tu familia",
+  description:
+    "BioFarm es tu farmacia de confianza en Zona Sur, Cochabamba. Medicamentos, entrega a domicilio, control de presión, atención de emergencias y más.",
 };
 
 export default function RootLayout({
@@ -37,9 +37,7 @@ export default function RootLayout({
       >
         <ThemeRegistry>
           <CronInitializer />
-          <ResponsiveLayout>
-            {children}
-          </ResponsiveLayout>
+          {children}
         </ThemeRegistry>
       </body>
     </html>

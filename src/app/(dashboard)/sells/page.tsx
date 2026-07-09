@@ -13,26 +13,23 @@ import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { Product, ProductFormData } from "@/types/products";
-// Date utilities removed as they're not used
-import { ProductForm } from "@/components/products/ProductForm";
-import { useProducts } from "@/hooks/useProducts";
+import PointOfSaleIcon from "@mui/icons-material/PointOfSaleOutlined";
+import { Sell, SellFormData } from "@/types";
+import { SellForm } from "@/components/sells/SellForm";
+import { useSells } from "@/hooks/useSells";
+import { PageHeader } from "@/components/layout/PageHeader";
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function SellsPage() {
+  const [sells, setSells] = useState<Sell[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<ProductFormData>({
-    name: "",
-    description: "",
-    category: "",
-    type: "",
-    dosage_form: "",
-    unit: "",
-    barcode: "",
-    status: true
+  const [formData, setFormData] = useState<SellFormData>({
+    customer_name: null,
+    employee_id: null,
+    payment_method: "efectivo",
+    items: [],
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -40,61 +37,49 @@ export default function ProductsPage() {
     severity: "success" as "success" | "error",
   });
 
-  const { createProduct, updateProduct, deleteProduct } = useProducts();
+  const { createSell, updateSell, deleteSell } = useSells();
 
-  const fetchProducts = async () => {
+  const fetchSells = async () => {
     try {
-      const response = await fetch("/api/products");
+      const response = await fetch("/api/sells");
       const data = await response.json();
-      if (!response.ok) {
-        setError(typeof data === "object" && data && "error" in data ? String(data.error) : "Error al cargar los productos");
-        setProducts([]);
-      } else if (Array.isArray(data)) {
-        setProducts(data);
-      } else {
-        setError("Respuesta inesperada del servidor al cargar productos");
-        setProducts([]);
-      }
+      setSells(data);
       setLoading(false);
     } catch {
-      setError("Error al cargar los productos");
+      setError("Error al cargar las ventas");
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchSells();
   }, []);
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = (sell: Sell) => {
     setFormData({
-      name: product.name ?? "",
-      description: product.description ?? "",
-      category: product.category ?? "",
-      type: product.type ?? "",
-      dosage_form: product.dosage_form ?? "",
-      unit: product.unit ?? "",
-      barcode: product.barcode ?? "",
-      status: product.status
+      customer_name: sell.customer_name ?? null,
+      employee_id: sell.employee_id ?? null,
+      payment_method: sell.payment_method,
+      items: sell.items || [],
     });
     setIsEditing(true);
     setOpenDialog(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Está seguro de que desea eliminar este producto?")) {
+    if (window.confirm("¿Está seguro de que desea eliminar esta venta?")) {
       try {
-        await deleteProduct(id);
+        await deleteSell(id);
         setSnackbar({
           open: true,
-          message: "Producto eliminado exitosamente",
+          message: "Venta eliminada exitosamente",
           severity: "success",
         });
-        await fetchProducts();
+        await fetchSells();
       } catch (error) {
         setSnackbar({
           open: true,
-          message: `Error al eliminar el producto: ${(error as Error).message}`,
+          message: `Error al eliminar la venta: ${(error as Error).message}`,
           severity: "error",
         });
       }
@@ -102,31 +87,31 @@ export default function ProductsPage() {
   };
 
   const handleFormChange = (
-    field: keyof ProductFormData,
-    value: string | number | boolean
+    field: keyof SellFormData,
+    value: unknown
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (data: ProductFormData) => {
+  const handleSubmit = async (data: SellFormData) => {
     try {
       if (isEditing) {
-        await updateProduct(selectedProduct!.product_id, data);
+        await updateSell(selectedSell!.sell_id, data);
         setSnackbar({
           open: true,
-          message: "Producto actualizado exitosamente",
+          message: "Venta actualizada exitosamente",
           severity: "success",
         });
       } else {
-        await createProduct(data);
+        await createSell(data);
         setSnackbar({
           open: true,
-          message: "Producto creado exitosamente",
+          message: "Venta creada exitosamente",
           severity: "success",
         });
       }
       setOpenDialog(false);
-      await fetchProducts();
+      await fetchSells();
     } catch (error) {
       setSnackbar({
         open: true,
@@ -138,40 +123,63 @@ export default function ProductsPage() {
 
   const resetForm = () => {
     setFormData({
-      name: "",
-      description: "",
-      category: "",
-      type: "",
-      dosage_form: "",
-      unit: "",
-      barcode: "",
-      status: true
+      customer_name: null,
+      employee_id: null,
+      payment_method: "efectivo",
+      items: [],
     });
     setIsEditing(false);
   };
 
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedSell, setSelectedSell] = useState<Sell | null>(null);
 
   const columns: GridColDef[] = [
-    { field: "product_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
-    { field: "name", headerName: "Nombre", flex: 2, minWidth: 150 },
-    { field: "description", headerName: "Descripción", flex: 2.5, minWidth: 180 },
-    { field: "category", headerName: "Categoría", flex: 1.5, minWidth: 120 },
-    { field: "type", headerName: "Tipo", flex: 1, minWidth: 100 },
-    { field: "dosage_form", headerName: "Forma", flex: 1, minWidth: 100 },
-    { field: "unit", headerName: "Unidad", flex: 1, minWidth: 80 },
-    { field: "barcode", headerName: "Código", flex: 1.2, minWidth: 100 },
+    { field: "sell_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
+    { field: "customer_name", headerName: "Cliente", flex: 1.5, minWidth: 120 },
+    { 
+      field: "employee_name", 
+      headerName: "Empleado", 
+      flex: 1.5, 
+      minWidth: 120,
+      renderCell: (params) => (
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+          {params.row.employee_name || `ID: ${params.row.employee_id}`}
+        </Typography>
+      ),
+    },
     {
-      field: "status",
-      headerName: "Estado",
+      field: "sell_date",
+      headerName: "Fecha",
+      flex: 1.2,
+      minWidth: 100,
+      renderCell: (params) => (
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+          {new Date(params.row.sell_date).toLocaleDateString()}
+        </Typography>
+      ),
+    },
+    {
+      field: "total_amount",
+      headerName: "Total",
       flex: 1,
       minWidth: 80,
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography 
-          color={params.value ? "success.main" : "error.main"}
-          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-        >
-          {params.value ? "Activo" : "Inactivo"}
+      renderCell: (params) => (
+        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 'bold' }}>
+          ${params.row.total_amount}
+        </Typography>
+      ),
+    },
+    {
+      field: "payment_method",
+      headerName: "Método",
+      flex: 1,
+      minWidth: 80,
+      renderCell: (params) => (
+        <Typography sx={{ 
+          textTransform: "capitalize",
+          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+        }}>
+          {params.row.payment_method}
         </Typography>
       ),
     },
@@ -186,7 +194,7 @@ export default function ProductsPage() {
             color="primary"
             size="small"
             onClick={() => {
-              setSelectedProduct(params.row);
+              setSelectedSell(params.row);
               handleEdit(params.row);
             }}
           >
@@ -195,7 +203,7 @@ export default function ProductsPage() {
           <IconButton
             color="error"
             size="small"
-            onClick={() => handleDelete(params.row.product_id)}
+            onClick={() => handleDelete(params.row.sell_id)}
           >
             <DeleteIcon />
           </IconButton>
@@ -207,43 +215,38 @@ export default function ProductsPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-          flexDirection={{ xs: "column", sm: "row" }}
-          gap={{ xs: 2, sm: 0 }}
-        >
-          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Productos
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              resetForm();
-              setOpenDialog(true);
-            }}
-            sx={{ 
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              width: { xs: '100%', sm: 'auto' }
-            }}
-          >
-            Nuevo producto
-          </Button>
-        </Box>
+        <PageHeader
+          title="Ventas"
+          subtitle="Registro de ventas realizadas al público"
+          icon={<PointOfSaleIcon />}
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                resetForm();
+                setOpenDialog(true);
+              }}
+              sx={{
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              Nueva venta
+            </Button>
+          }
+        />
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
-            rows={products}
+            rows={sells}
             columns={columns}
-            getRowId={(row) => row.product_id}
+            getRowId={(row) => row.sell_id}
             loading={loading}
             autoHeight
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             sx={{
-              minWidth: 800,
+              minWidth: 600,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
@@ -267,7 +270,7 @@ export default function ProductsPage() {
         )}
       </Paper>
 
-      <ProductForm
+      <SellForm
         open={openDialog}
         isEditing={isEditing}
         formData={formData}

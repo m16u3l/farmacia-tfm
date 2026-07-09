@@ -31,7 +31,9 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DownloadIcon from "@mui/icons-material/Download";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
+import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
 import { Inventory, Product } from "@/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -520,12 +522,11 @@ export default function ValidationsPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography
-          variant="h4"
-          sx={{ mb: 3, fontSize: { xs: "1.5rem", sm: "2rem" } }}
-        >
-          Validaciones y Reportes
-        </Typography>
+        <PageHeader
+          title="Validaciones y Reportes"
+          subtitle="Estado del inventario y desempeño de ventas"
+          icon={<AssessmentIcon />}
+        />
 
         <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
           <Tabs

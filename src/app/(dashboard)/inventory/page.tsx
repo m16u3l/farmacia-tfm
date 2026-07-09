@@ -16,9 +16,11 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from "@mui/icons-material/EventBusy";
+import InventoryIconOutlined from "@mui/icons-material/Inventory2Outlined";
 import { Inventory, InventoryFormData, Product } from "@/types";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { useInventory } from "@/hooks/useInventory";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
@@ -354,30 +356,25 @@ export default function InventoryPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-          flexDirection={{ xs: "column", sm: "row" }}
-          gap={{ xs: 2, sm: 0 }}
-        >
-          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Inventario
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAdd}
-            sx={{ 
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              width: { xs: '100%', sm: 'auto' },
-              maxWidth: { xs: "100%", sm: "auto" }
-            }}
-          >
-            Agregar Item
-          </Button>
-        </Box>
+        <PageHeader
+          title="Inventario"
+          subtitle="Control de lotes, existencias y vencimientos"
+          icon={<InventoryIconOutlined />}
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAdd}
+              sx={{
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                width: { xs: "100%", sm: "auto" },
+                maxWidth: { xs: "100%", sm: "auto" },
+              }}
+            >
+              Agregar Item
+            </Button>
+          }
+        />
 
         {/* Alertas de bajo stock y vencimiento */}
         {(getExpiredItems().length > 0 || getLowStockItems().length > 0 || getExpiringItems().length > 0) && (

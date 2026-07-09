@@ -13,10 +13,12 @@ import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import GroupsIcon from "@mui/icons-material/GroupsOutlined";
 import { UserForm } from "@/components/users/UserForm";
 import { User, UserFormData } from "@/types/user";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useUsers } from "@/hooks/useUsers";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 function LoadingState() {
   return (
@@ -116,32 +118,27 @@ export default function UsersPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-          flexDirection={{ xs: "column", sm: "row" }}
-          gap={{ xs: 2, sm: 0 }}
-        >
-          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Usuarios
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              resetForm();
-              setOpenDialog(true);
-            }}
-            sx={{ 
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              width: { xs: '100%', sm: 'auto' }
-            }}
-          >
-            Nuevo usuario
-          </Button>
-        </Box>
+        <PageHeader
+          title="Usuarios"
+          subtitle="Cuentas con acceso al sistema"
+          icon={<GroupsIcon />}
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                resetForm();
+                setOpenDialog(true);
+              }}
+              sx={{
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              Nuevo usuario
+            </Button>
+          }
+        />
 
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid

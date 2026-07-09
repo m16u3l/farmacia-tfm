@@ -5,7 +5,7 @@ import { Box, CssBaseline } from "@mui/material";
 import { Sidebar } from "./Sidebar";
 import { MobileAppBar } from "./MobileAppBar";
 
-const DRAWER_WIDTH = 240;
+const DRAWER_WIDTH = 250;
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -44,6 +44,7 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
           minHeight: '100vh',
           display: "flex",
           flexDirection: "column",
+          backgroundColor: "background.default",
           // Add top margin for mobile app bar
           mt: { xs: '64px', md: 0 },
         }}

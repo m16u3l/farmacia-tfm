@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import {
   Box,
   Paper,
-  Typography,
   TextField,
   Button,
   Alert,
   Snackbar,
   CircularProgress,
 } from "@mui/material";
+import SettingsIcon from "@mui/icons-material/SettingsOutlined";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function ConfiguracionPage() {
   const [diasCobranza, setDiasCobranza] = useState("");
@@ -87,9 +88,11 @@ export default function ConfiguracionPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, maxWidth: 600, mx: "auto" }}>
-        <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-          Configuración del Sistema
-        </Typography>
+        <PageHeader
+          title="Configuración del Sistema"
+          subtitle="Parámetros generales de operación"
+          icon={<SettingsIcon />}
+        />
 
         <form onSubmit={handleSubmit}>
           <TextField

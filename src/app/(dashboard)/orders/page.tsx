@@ -14,8 +14,10 @@ import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import LocalMallIcon from "@mui/icons-material/LocalMallOutlined";
 import { Order, OrderFormData, Supplier } from "@/types";
 import { OrderForm } from "@/components/orders/OrderForm";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -332,30 +334,25 @@ export default function OrdersPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-          flexDirection={{ xs: "column", sm: "row" }}
-          gap={{ xs: 2, sm: 0 }}
-        >
-          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Órdenes de Compra
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleAdd}
-            sx={{ 
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              width: { xs: '100%', sm: 'auto' },
-              maxWidth: { xs: "100%", sm: "auto" }
-            }}
-          >
-            Nueva Orden
-          </Button>
-        </Box>
+        <PageHeader
+          title="Órdenes de Compra"
+          subtitle="Pedidos realizados a proveedores"
+          icon={<LocalMallIcon />}
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAdd}
+              sx={{
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                width: { xs: "100%", sm: "auto" },
+                maxWidth: { xs: "100%", sm: "auto" },
+              }}
+            >
+              Nueva Orden
+            </Button>
+          }
+        />
 
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid

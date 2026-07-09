@@ -14,9 +14,11 @@ import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import BadgeIcon from "@mui/icons-material/BadgeOutlined";
 import { EmployeeForm } from "@/components/employees/EmployeeForm";
 import { Employee, EmployeeFormData } from "@/types/employee";
 import { useEmployees } from "@/hooks/useEmployees";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 function LoadingState() {
   return (
@@ -182,32 +184,27 @@ export default function EmployeesPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-          flexDirection={{ xs: "column", sm: "row" }}
-          gap={{ xs: 2, sm: 0 }}
-        >
-          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Empleados
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              resetForm();
-              setOpenDialog(true);
-            }}
-            sx={{ 
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              width: { xs: '100%', sm: 'auto' }
-            }}
-          >
-            Nuevo empleado
-          </Button>
-        </Box>
+        <PageHeader
+          title="Empleados"
+          subtitle="Personal que atiende la farmacia"
+          icon={<BadgeIcon />}
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                resetForm();
+                setOpenDialog(true);
+              }}
+              sx={{
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              Nuevo empleado
+            </Button>
+          }
+        />
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={employees}

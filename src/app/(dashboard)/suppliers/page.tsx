@@ -13,9 +13,11 @@ import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import LocalShippingIcon from "@mui/icons-material/LocalShippingOutlined";
 import { Supplier, SupplierFormData } from "@/types";
 import { SupplierForm } from "@/components/suppliers/SupplierForm";
 import { useSuppliers } from "@/hooks/useSuppliers";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -176,32 +178,27 @@ export default function SuppliersPage() {
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-          flexDirection={{ xs: "column", sm: "row" }}
-          gap={{ xs: 2, sm: 0 }}
-        >
-          <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
-            Proveedores
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              resetForm();
-              setOpenDialog(true);
-            }}
-            sx={{ 
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              width: { xs: '100%', sm: 'auto' }
-            }}
-          >
-            Nuevo proveedor
-          </Button>
-        </Box>
+        <PageHeader
+          title="Proveedores"
+          subtitle="Empresas y contactos que abastecen a la farmacia"
+          icon={<LocalShippingIcon />}
+          action={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                resetForm();
+                setOpenDialog(true);
+              }}
+              sx={{
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              Nuevo proveedor
+            </Button>
+          }
+        />
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={suppliers}
