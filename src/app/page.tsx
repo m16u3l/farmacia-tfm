@@ -22,7 +22,6 @@ import PlaceIcon from "@mui/icons-material/PlaceOutlined";
 import AccessTimeIcon from "@mui/icons-material/AccessTimeOutlined";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import PhoneIcon from "@mui/icons-material/Phone";
-import Link from "next/link";
 
 const WHATSAPP_NUMBER = "59174808111"; // +591 74808111
 const PHONE_DISPLAY = "+591 74808111";
