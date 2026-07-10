@@ -4,10 +4,14 @@ if (!process.env.DB_CONNECTION) {
   throw new Error('Database connection string not found in environment variables');
 }
 
+const connectionString = process.env.DB_CONNECTION;
+const connectionUrl = new URL(connectionString);
+const isLocalConnection = ['localhost', '127.0.0.1', '::1'].includes(connectionUrl.hostname);
+
 const pool = new Pool({
-  connectionString: process.env.DB_CONNECTION,
-  ssl: {
-    rejectUnauthorized: false
+  connectionString,
+  ssl: isLocalConnection ? false : {
+    rejectUnauthorized: false,
   },
   max: 10,
   idleTimeoutMillis: 30000,

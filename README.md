@@ -2,6 +2,18 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Base de datos local
+
+Para usar PostgreSQL localmente:
+
+```bash
+docker compose up -d postgres
+```
+
+La aplicación leerá la conexión desde [.env.local](.env.local).
+
+### Ejecutar la app
+
 First, run the development server:
 
 ```bash
