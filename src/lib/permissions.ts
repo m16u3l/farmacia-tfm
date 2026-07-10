@@ -13,6 +13,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[] | "*"> = {
     "/dashboard",
     "/products",
     "/inventory",
+    "/areas",
     "/sells",
     "/orders",
     "/suppliers",

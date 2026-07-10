@@ -76,6 +76,22 @@ export const useInventory = () => {
     }
   };
 
+  const transferInventoryItem = async (
+    id: number,
+    data: { destination_area_id: number; quantity: number; notes?: string }
+  ): Promise<Inventory | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      return await inventoryService.transfer(id, data);
+    } catch (err) {
+      setError((err as Error).message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     error,
@@ -83,6 +99,7 @@ export const useInventory = () => {
     updateInventoryItem,
     deleteInventoryItem,
     getInventoryById,
-    getLowStock
+    getLowStock,
+    transferInventoryItem
   };
 };

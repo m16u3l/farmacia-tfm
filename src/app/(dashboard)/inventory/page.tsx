@@ -17,36 +17,42 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from "@mui/icons-material/EventBusy";
 import InventoryIconOutlined from "@mui/icons-material/Inventory2Outlined";
-import { Inventory, InventoryFormData, Product } from "@/types";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import { Inventory, InventoryArea, InventoryFormData, Product } from "@/types";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
+import { TransferDialog } from "@/components/inventory/TransferDialog";
 import { useInventory } from "@/hooks/useInventory";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fluidFontSize } from "@/utils/fluidType";
 
+const EMPTY_FORM: InventoryFormData = {
+  product_id: 0,
+  batch_number: null,
+  expiry_date: null,
+  quantity_available: 0,
+  area_id: null,
+  purchase_price: 0,
+  sale_price: 0,
+};
+
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [areas, setAreas] = useState<InventoryArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
-  const [formData, setFormData] = useState<InventoryFormData>({
-    product_id: 0,
-    batch_number: null,
-    expiry_date: null,
-    quantity_available: 0,
-    location: null,
-    purchase_price: 0,
-    sale_price: 0,
-  });
+  const [formData, setFormData] = useState<InventoryFormData>(EMPTY_FORM);
+  const [transferItem, setTransferItem] = useState<Inventory | null>(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success" as "success" | "error",
   });
 
-  const { createInventoryItem, updateInventoryItem, deleteInventoryItem } = useInventory();
+  const { createInventoryItem, updateInventoryItem, deleteInventoryItem, transferInventoryItem } = useInventory();
 
   const fetchInventory = async () => {
     try {
@@ -86,23 +92,34 @@ export default function InventoryPage() {
     }
   };
 
+  const fetchAreas = async () => {
+    try {
+      const response = await fetch("/api/inventory-areas");
+      const data = await response.json();
+      if (!response.ok) {
+        console.error("Error al cargar áreas:", data);
+        setAreas([]);
+      } else if (Array.isArray(data)) {
+        setAreas(data);
+      } else {
+        console.error("Respuesta inesperada del servidor al cargar áreas:", data);
+        setAreas([]);
+      }
+    } catch {
+      console.error("Error al cargar áreas");
+    }
+  };
+
   useEffect(() => {
     fetchInventory();
     fetchProducts();
+    fetchAreas();
   }, []);
 
   const handleAdd = () => {
     setIsEditing(false);
     setSelectedItem(null);
-    setFormData({
-      product_id: 0,
-      batch_number: null,
-      expiry_date: null,
-      quantity_available: 0,
-      location: null,
-      purchase_price: 0,
-      sale_price: 0,
-    });
+    setFormData(EMPTY_FORM);
     setOpenDialog(true);
   };
 
@@ -114,11 +131,27 @@ export default function InventoryPage() {
       batch_number: item.batch_number,
       expiry_date: item.expiry_date,
       quantity_available: item.quantity_available,
-      location: item.location,
+      area_id: item.area_id,
       purchase_price: item.purchase_price,
       sale_price: item.sale_price,
     });
     setOpenDialog(true);
+  };
+
+  const handleOpenTransfer = (item: Inventory) => {
+    setTransferItem(item);
+  };
+
+  const handleTransfer = async (data: { destination_area_id: number; quantity: number; notes?: string }) => {
+    if (!transferItem) return;
+    const result = await transferInventoryItem(transferItem.inventory_id, data);
+    if (result) {
+      setSnackbar({ open: true, message: "Transferencia realizada correctamente", severity: "success" });
+      setTransferItem(null);
+      fetchInventory();
+    } else {
+      setSnackbar({ open: true, message: "Error al transferir el elemento", severity: "error" });
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -316,11 +349,12 @@ export default function InventoryPage() {
         </Box>
       ),
     },
-    { 
-      field: "location", 
-      headerName: "Ubicación", 
-      flex: 1, 
+    {
+      field: "area_name",
+      headerName: "Ubicación",
+      flex: 1,
       minWidth: 80,
+      valueFormatter: (params) => params || "Sin asignar",
     },
     {
       field: "purchase_price",
@@ -339,10 +373,18 @@ export default function InventoryPage() {
     {
       field: "actions",
       headerName: "Acciones",
-      width: 120,
+      width: 160,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
+          <IconButton
+            size="small"
+            onClick={() => handleOpenTransfer(params.row)}
+            color="primary"
+            title="Transferir"
+          >
+            <SwapHorizIcon />
+          </IconButton>
           <IconButton
             size="small"
             onClick={() => handleEdit(params.row)}
@@ -547,9 +589,18 @@ export default function InventoryPage() {
         isEditing={isEditing}
         formData={formData}
         products={products}
+        areas={areas}
         onClose={() => setOpenDialog(false)}
         onSubmit={handleSubmit}
         onChange={handleFormChange}
+      />
+
+      <TransferDialog
+        open={!!transferItem}
+        item={transferItem}
+        areas={areas}
+        onClose={() => setTransferItem(null)}
+        onSubmit={handleTransfer}
       />
 
       <Snackbar

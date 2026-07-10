@@ -12,13 +12,15 @@ export async function GET(
     const client = await pool.connect();
     try {
       const result = await client.query(
-        `SELECT 
+        `SELECT
           i.*,
           p.name as product_name,
           p.description as product_description,
-          p.category as product_category
+          p.category as product_category,
+          a.name as area_name
         FROM inventory i
         LEFT JOIN products p ON i.product_id = p.product_id
+        LEFT JOIN inventory_areas a ON i.area_id = a.area_id
         WHERE i.inventory_id = $1`,
         [params.id]
       );
@@ -55,7 +57,7 @@ export async function PUT(
       batch_number,
       expiry_date,
       quantity_available,
-      location,
+      area_id,
       purchase_price,
       sale_price
     } = data;
@@ -64,13 +66,13 @@ export async function PUT(
     try {
       // Una edición manual del vencimiento se considera confirmada (ya no aproximada)
       const result = await client.query(
-        `UPDATE inventory 
-         SET product_id = $1, batch_number = $2, expiry_date = $3, 
-             quantity_available = $4, location = $5, purchase_price = $6, 
+        `UPDATE inventory
+         SET product_id = $1, batch_number = $2, expiry_date = $3,
+             quantity_available = $4, area_id = $5, purchase_price = $6,
              sale_price = $7, expiry_is_approximate = FALSE
          WHERE inventory_id = $8
          RETURNING *`,
-        [product_id, batch_number, expiry_date, quantity_available, location, purchase_price, sale_price, params.id]
+        [product_id, batch_number, expiry_date, quantity_available, area_id || null, purchase_price, sale_price, params.id]
       );
 
       if (result.rows.length === 0) {

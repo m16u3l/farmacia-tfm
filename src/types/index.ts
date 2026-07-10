@@ -4,3 +4,5 @@ export * from './employee';
 export * from './inventory';
 export * from './order';
 export * from './sell';
+export * from './area';
+export * from './validation';

@@ -23,17 +23,32 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Checkbox,
+  MenuItem,
   Snackbar,
   ChipProps,
 } from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DownloadIcon from "@mui/icons-material/Download";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
 import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
-import { Inventory, Product } from "@/types";
+import { Inventory, InventoryArea, InventoryValidationItem, InventoryValidationWithItems, Product, ValidationType } from "@/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useValidations } from "@/hooks/useValidations";
+import { buildAreaOptions } from "@/utils/areaTree";
+
+const VALIDATION_TYPE_LABELS: Record<ValidationType, string> = {
+  area: "Por área/ubicación",
+  expiring: "Próximos a vencer",
+  expired: "Vencidos",
+  low_stock: "Bajo stock",
+};
+
+const VALIDATION_ITEM_STATUS_LABELS: Record<InventoryValidationItem["status"], { label: string; color: "default" | "success" | "warning" | "error" }> = {
+  pending: { label: "PENDIENTE", color: "default" },
+  confirmed: { label: "VERIFICADO OK", color: "success" },
+  inconsistent: { label: "INCONSISTENCIA", color: "warning" },
+  not_found: { label: "NO ENCONTRADO", color: "error" },
+};
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -72,19 +87,11 @@ interface MonthlySales {
   products_sold: number;
 }
 
-interface VerificationRecord {
-  inventory_id: number;
-  verified: boolean;
-  actual_quantity: number;
-  notes: string;
-  verified_at?: string;
-  verified_by?: string;
-}
-
 export default function ValidationsPage() {
   const [tabValue, setTabValue] = useState(0);
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [areas, setAreas] = useState<InventoryArea[]>([]);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
   const [monthlySales, setMonthlySales] = useState<MonthlySales[]>([]);
   const [selectedDate, setSelectedDate] = useState(
@@ -94,12 +101,11 @@ export default function ValidationsPage() {
     new Date().toISOString().slice(0, 7)
   );
   // loading state removed (not used in UI)
-  const [verificationMode, setVerificationMode] = useState(false);
-  const [verificationRecords, setVerificationRecords] = useState<
-    Map<number, VerificationRecord>
-  >(new Map());
+  const [validationType, setValidationType] = useState<ValidationType>("area");
+  const [selectedValidationAreaId, setSelectedValidationAreaId] = useState<number | "">("");
+  const [activeValidation, setActiveValidation] = useState<InventoryValidationWithItems | null>(null);
   const [openVerifyDialog, setOpenVerifyDialog] = useState(false);
-  const [currentItem, setCurrentItem] = useState<Inventory | null>(null);
+  const [currentValidationItem, setCurrentValidationItem] = useState<InventoryValidationItem | null>(null);
   const [actualQuantity, setActualQuantity] = useState(0);
   const [verificationNotes, setVerificationNotes] = useState("");
   const [snackbar, setSnackbar] = useState({
@@ -108,9 +114,13 @@ export default function ValidationsPage() {
     severity: "success" as "success" | "error" | "info",
   });
 
+  const { createSession, verifyItem, completeSession, cancelSession } = useValidations();
+  const verificationMode = activeValidation !== null;
+
   useEffect(() => {
     fetchInventory();
     fetchProducts();
+    fetchAreas();
     fetchDailySales();
     fetchMonthlySales();
   }, []);
@@ -148,6 +158,24 @@ export default function ValidationsPage() {
       }
     } catch (error) {
       console.error("Error al cargar productos:", error);
+    }
+  };
+
+  const fetchAreas = async () => {
+    try {
+      const response = await fetch("/api/inventory-areas");
+      const data = await response.json();
+      if (!response.ok) {
+        console.error("Error al cargar áreas:", data);
+        setAreas([]);
+      } else if (Array.isArray(data)) {
+        setAreas(data);
+      } else {
+        console.error("Respuesta inesperada del servidor al cargar áreas:", data);
+        setAreas([]);
+      }
+    } catch (error) {
+      console.error("Error al cargar áreas:", error);
     }
   };
 
@@ -264,12 +292,14 @@ export default function ValidationsPage() {
     return product ? product.name : `${productId}`;
   };
 
-  const getInventoryStatus = (item: Inventory) => {
-    // Use helper functions below; kept simple here for readability.
-    const days = getDaysUntilExpiry(item);
+  // Estado combinado (vencimiento + stock) a partir de los valores crudos —
+  // reutilizado tanto por `inventory` (dashboard) como por los ítems de una
+  // sesión de validación (que snapshotean expiry_date/expected_quantity).
+  const getStatus = (expiryDate: string | null | undefined, quantity: number) => {
+    const days = getDaysUntilExpiry(expiryDate);
     const isExpired = typeof days === "number" && days < 0;
     const isAboutToExpire = typeof days === "number" && days >= 0 && days <= 40;
-    const isLowStock = item.quantity_available <= 10;
+    const isLowStock = quantity <= 10;
 
     if (isExpired) return { status: "expired", label: "VENCIDO", color: "error" };
     if (isAboutToExpire) return { status: "expiring", label: "POR VENCER", color: "warning" };
@@ -277,69 +307,84 @@ export default function ValidationsPage() {
     return { status: "ok", label: "OK", color: "success" };
   };
 
+  const getInventoryStatus = (item: Inventory) => getStatus(item.expiry_date, item.quantity_available);
+
   // Helper: returns number of days until expiry (can be negative), or null if no valid expiry date
-  const getDaysUntilExpiry = (item: Inventory): number | null => {
-    if (!item.expiry_date) return null;
-    const parsed = new Date(item.expiry_date);
+  const getDaysUntilExpiry = (expiryDate: string | null | undefined): number | null => {
+    if (!expiryDate) return null;
+    const parsed = new Date(expiryDate);
     if (isNaN(parsed.getTime())) return null;
     const now = new Date();
     return Math.ceil((parsed.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  const handleStartVerification = () => {
-    setVerificationMode(true);
-    setVerificationRecords(new Map());
+  const handleStartVerification = async () => {
+    if (validationType === "area" && !selectedValidationAreaId) {
+      setSnackbar({ open: true, message: "Selecciona un área para validar", severity: "error" });
+      return;
+    }
+
+    const session = await createSession({
+      type: validationType,
+      area_id: validationType === "area" ? Number(selectedValidationAreaId) : undefined,
+    });
+
+    if (!session) {
+      setSnackbar({ open: true, message: "Error al iniciar la validación", severity: "error" });
+      return;
+    }
+
+    setActiveValidation(session);
     setSnackbar({
       open: true,
-      message:
-        "Modo de verificación activado. Verifique cada item del inventario.",
+      message: `Validación de "${VALIDATION_TYPE_LABELS[validationType]}" iniciada (${session.items.length} ítems). Verifique cada uno.`,
       severity: "info",
     });
   };
 
-  const handleOpenVerifyDialog = (item: Inventory) => {
-    setCurrentItem(item);
-    const existingRecord = verificationRecords.get(item.inventory_id);
-    setActualQuantity(
-      existingRecord?.actual_quantity || item.quantity_available
-    );
-    setVerificationNotes(existingRecord?.notes || "");
+  const handleOpenVerifyDialog = (item: InventoryValidationItem) => {
+    setCurrentValidationItem(item);
+    setActualQuantity(item.actual_quantity ?? item.expected_quantity);
+    setVerificationNotes(item.notes || "");
     setOpenVerifyDialog(true);
   };
 
-  const handleVerifyItem = () => {
-    if (!currentItem) return;
+  const handleVerifyItem = async () => {
+    if (!currentValidationItem || !activeValidation) return;
 
-    const record: VerificationRecord = {
-      inventory_id: currentItem.inventory_id,
-      verified: true,
+    const updatedItem = await verifyItem(activeValidation.validation_id, currentValidationItem.validation_item_id, {
       actual_quantity: actualQuantity,
       notes: verificationNotes,
-      verified_at: new Date().toISOString(),
-      verified_by: "Farmacéutico", // Aquí podrías usar el usuario actual
-    };
+    });
 
-    const newRecords = new Map(verificationRecords);
-    newRecords.set(currentItem.inventory_id, record);
-    setVerificationRecords(newRecords);
+    if (!updatedItem) {
+      setSnackbar({ open: true, message: "Error al verificar el ítem", severity: "error" });
+      return;
+    }
+
+    setActiveValidation({
+      ...activeValidation,
+      items: activeValidation.items.map((i) =>
+        i.validation_item_id === updatedItem.validation_item_id ? { ...i, ...updatedItem } : i
+      ),
+    });
 
     setSnackbar({
       open: true,
-      message: `${getProductName(
-        currentItem.product_id
-      )} verificado correctamente`,
+      message: `${currentValidationItem.product_name || "Ítem"} verificado correctamente`,
       severity: "success",
     });
 
     setOpenVerifyDialog(false);
-    setCurrentItem(null);
+    setCurrentValidationItem(null);
     setActualQuantity(0);
     setVerificationNotes("");
   };
 
-  const handleFinishVerification = () => {
-    const totalItems = inventory.length;
-    const verifiedItems = verificationRecords.size;
+  const handleFinishVerification = async () => {
+    if (!activeValidation) return;
+    const totalItems = activeValidation.items.length;
+    const verifiedItems = activeValidation.items.filter((i) => i.status !== "pending").length;
 
     if (verifiedItems < totalItems) {
       if (
@@ -351,34 +396,41 @@ export default function ValidationsPage() {
       }
     }
 
-    // Aquí podrías guardar los registros en la base de datos
-    const auditReport = Array.from(verificationRecords.values());
-    console.log("Reporte de auditoría:", auditReport);
+    const completed = await completeSession(activeValidation.validation_id);
+    if (!completed) {
+      setSnackbar({ open: true, message: "Error al finalizar la validación", severity: "error" });
+      return;
+    }
 
     setSnackbar({
       open: true,
-      message: `Verificación completada. ${verifiedItems} items verificados.`,
+      message: `Validación completada. ${verifiedItems} items verificados.`,
       severity: "success",
     });
 
-    setVerificationMode(false);
+    setActiveValidation(null);
   };
 
-  const handleCancelVerification = () => {
-    if (verificationRecords.size > 0) {
+  const handleCancelVerification = async () => {
+    if (!activeValidation) return;
+    const verifiedItems = activeValidation.items.filter((i) => i.status !== "pending").length;
+
+    if (verifiedItems > 0) {
       if (
         !window.confirm(
-          "¿Deseas cancelar la verificación? Se perderán todos los datos."
+          "¿Deseas cancelar la validación? Se perderán todos los datos."
         )
       ) {
         return;
       }
     }
-    setVerificationMode(false);
-    setVerificationRecords(new Map());
+
+    await cancelSession(activeValidation.validation_id);
+    setActiveValidation(null);
   };
 
   const handleExportVerification = () => {
+    if (!activeValidation) return;
     const csvContent = [
       [
         "Producto",
@@ -387,26 +439,20 @@ export default function ValidationsPage() {
         "Cantidad Real",
         "Diferencia",
         "Notas",
-        "Verificado Por",
+        "Estado",
         "Fecha",
       ],
-      ...Array.from(verificationRecords.values()).map((record) => {
-        const item = inventory.find(
-          (i) => i.inventory_id === record.inventory_id
-        );
-        if (!item) return [];
-        const difference = record.actual_quantity - item.quantity_available;
+      ...activeValidation.items.map((item) => {
+        const difference = (item.actual_quantity ?? 0) - item.expected_quantity;
         return [
-          getProductName(item.product_id),
+          item.product_name || "N/A",
           item.batch_number || "N/A",
-          item.quantity_available,
-          record.actual_quantity,
-          difference,
-          record.notes || "N/A",
-          record.verified_by || "N/A",
-          record.verified_at
-            ? new Date(record.verified_at).toLocaleString()
-            : "N/A",
+          item.expected_quantity,
+          item.actual_quantity ?? "N/A",
+          item.actual_quantity !== null ? difference : "N/A",
+          item.notes || "N/A",
+          VALIDATION_ITEM_STATUS_LABELS[item.status].label,
+          item.verified_at ? new Date(item.verified_at).toLocaleString() : "N/A",
         ];
       }),
     ]
@@ -505,11 +551,11 @@ export default function ValidationsPage() {
     lowStock: inventory.filter((item) => item.quantity_available <= 10).length,
     // Use days util to determine expiry states to avoid double-calling getInventoryStatus
     expiring: inventory.filter((item) => {
-      const days = getDaysUntilExpiry(item);
+      const days = getDaysUntilExpiry(item.expiry_date);
       return typeof days === "number" && days >= 0 && days <= 40;
     }).length,
     expired: inventory.filter((item) => {
-      const days = getDaysUntilExpiry(item);
+      const days = getDaysUntilExpiry(item.expiry_date);
       return typeof days === "number" && days < 0;
     }).length,
   };
@@ -610,7 +656,7 @@ export default function ValidationsPage() {
             </Grid>
           </Box>
 
-          {verificationMode && (
+          {verificationMode && activeValidation && (
             <Alert severity="info" sx={{ mb: 2 }}>
               <Box
                 sx={{
@@ -620,9 +666,11 @@ export default function ValidationsPage() {
                 }}
               >
                 <Typography>
-                  <strong>Modo de Verificación Activo: </strong> -{" "}
-                  {verificationRecords.size} de {inventory.length} items
-                  verificados
+                  <strong>Validación activa: </strong>{" "}
+                  {VALIDATION_TYPE_LABELS[activeValidation.type]}
+                  {activeValidation.area_name ? ` — ${activeValidation.area_name}` : ""} -{" "}
+                  {activeValidation.items.filter((i) => i.status !== "pending").length} de{" "}
+                  {activeValidation.items.length} items verificados
                 </Typography>
               </Box>
               <Box sx={{ display: "flex", gap: 1 }}>
@@ -661,17 +709,52 @@ export default function ValidationsPage() {
               mb: 2,
               gap: 2,
               flexWrap: "wrap",
+              alignItems: "flex-end",
             }}
           >
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<VerifiedIcon />}
-              onClick={handleStartVerification}
-              disabled={verificationMode}
-            >
-              Verificar Integridad de Inventario
-            </Button>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <TextField
+                select
+                label="Tipo de validación"
+                size="small"
+                value={validationType}
+                onChange={(e) => setValidationType(e.target.value as ValidationType)}
+                disabled={verificationMode}
+                sx={{ minWidth: 200 }}
+              >
+                {(Object.keys(VALIDATION_TYPE_LABELS) as ValidationType[]).map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {VALIDATION_TYPE_LABELS[type]}
+                  </MenuItem>
+                ))}
+              </TextField>
+              {validationType === "area" && (
+                <TextField
+                  select
+                  label="Área"
+                  size="small"
+                  value={selectedValidationAreaId}
+                  onChange={(e) => setSelectedValidationAreaId(e.target.value ? Number(e.target.value) : "")}
+                  disabled={verificationMode}
+                  sx={{ minWidth: 220 }}
+                >
+                  {buildAreaOptions(areas).map(({ area, depth, label }) => (
+                    <MenuItem key={area.area_id} value={area.area_id} sx={{ pl: 2 + depth * 2 }}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<VerifiedIcon />}
+                onClick={handleStartVerification}
+                disabled={verificationMode}
+              >
+                Iniciar Validación
+              </Button>
+            </Box>
             <Button
               variant="contained"
               startIcon={<DownloadIcon />}
@@ -685,11 +768,6 @@ export default function ValidationsPage() {
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: "primary.light" }}>
-                  {verificationMode && (
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
-                      ✓
-                    </TableCell>
-                  )}
                   <TableCell sx={{ color: "white", fontWeight: "bold" }}>
                     Producto
                   </TableCell>
@@ -718,131 +796,115 @@ export default function ValidationsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {inventory.map((item) => {
-                  const status = getInventoryStatus(item);
-                  const isVerified = verificationRecords.has(item.inventory_id);
-                  const verificationRecord = verificationRecords.get(
-                    item.inventory_id
-                  );
-
-                  return (
-                    <TableRow
-                      key={item.inventory_id}
-                      sx={{
-                        "&:nth-of-type(even)": { bgcolor: "action.hover" },
-                        bgcolor:
-                          status.status === "expired"
-                            ? "error.light"
-                            : "inherit",
-                      }}
-                    >
-                      {verificationMode && (
+                {!verificationMode &&
+                  inventory.map((item) => {
+                    const status = getInventoryStatus(item);
+                    return (
+                      <TableRow
+                        key={item.inventory_id}
+                        sx={{
+                          "&:nth-of-type(even)": { bgcolor: "action.hover" },
+                          bgcolor: status.status === "expired" ? "error.light" : "inherit",
+                        }}
+                      >
+                        <TableCell>{getProductName(item.product_id)}</TableCell>
+                        <TableCell>{item.batch_number || "N/A"}</TableCell>
                         <TableCell>
-                          <Checkbox
-                            checked={isVerified}
-                            disabled
-                            icon={<CheckCircleIcon />}
-                            checkedIcon={<CheckCircleIcon color="success" />}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell>{getProductName(item.product_id)}</TableCell>
-                      <TableCell>{item.batch_number || "N/A"}</TableCell>
-                      <TableCell>
-                        <Box>
                           <Typography
                             sx={{
-                              color:
-                                item.quantity_available <= 10
-                                  ? "warning.main"
-                                  : "inherit",
-                              fontWeight:
-                                item.quantity_available <= 10
-                                  ? "bold"
-                                  : "normal",
+                              color: item.quantity_available <= 10 ? "warning.main" : "inherit",
+                              fontWeight: item.quantity_available <= 10 ? "bold" : "normal",
                             }}
                           >
                             {item.quantity_available}
                           </Typography>
-                          {isVerified &&
-                            verificationRecord &&
-                            verificationRecord.actual_quantity !==
-                              item.quantity_available && (
+                        </TableCell>
+                        <TableCell>
+                          {item.expiry_date
+                            ? new Date(item.expiry_date).toLocaleDateString()
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={status.label}
+                            color={status.color as ChipProps["color"]}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                {verificationMode &&
+                  activeValidation &&
+                  activeValidation.items.map((item) => {
+                    const status = getStatus(item.expiry_date, item.actual_quantity ?? item.expected_quantity);
+                    const statusInfo = VALIDATION_ITEM_STATUS_LABELS[item.status];
+
+                    return (
+                      <TableRow
+                        key={item.validation_item_id}
+                        sx={{
+                          "&:nth-of-type(even)": { bgcolor: "action.hover" },
+                          bgcolor: status.status === "expired" ? "error.light" : "inherit",
+                        }}
+                      >
+                        <TableCell>{item.product_name || "N/A"}</TableCell>
+                        <TableCell>{item.batch_number || "N/A"}</TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography
+                              sx={{
+                                color: item.expected_quantity <= 10 ? "warning.main" : "inherit",
+                                fontWeight: item.expected_quantity <= 10 ? "bold" : "normal",
+                              }}
+                            >
+                              {item.expected_quantity}
+                            </Typography>
+                            {item.actual_quantity !== null && item.actual_quantity !== item.expected_quantity && (
                               <Typography variant="caption" color="error">
-                                Real: {verificationRecord.actual_quantity} (Dif:{" "}
-                                {verificationRecord.actual_quantity -
-                                  item.quantity_available}
-                                )
+                                Real: {item.actual_quantity} (Dif:{" "}
+                                {item.actual_quantity - item.expected_quantity})
                               </Typography>
                             )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {item.expiry_date
-                          ? new Date(item.expiry_date).toLocaleDateString()
-                          : "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={status.label}
-                          color={status.color as ChipProps["color"]}
-                          size="small"
-                          sx={{ fontWeight: "bold" }}
-                        />
-                      </TableCell>
-                      {verificationMode && (
-                        <TableCell>
-                          {isVerified && verificationRecord ? (
-                            verificationRecord.actual_quantity === 0 ? (
-                              <Chip
-                                label="NO ENCONTRADO"
-                                color="error"
-                                size="small"
-                                sx={{ fontWeight: "bold" }}
-                              />
-                            ) : verificationRecord.actual_quantity !== item.quantity_available ? (
-                              <Chip
-                                label="INCONSISTENCIA"
-                                color="warning"
-                                size="small"
-                                sx={{ fontWeight: "bold" }}
-                              />
-                            ) : (
-                              <Chip
-                                label="VERIFICADO OK"
-                                color="success"
-                                size="small"
-                                sx={{ fontWeight: "bold" }}
-                              />
-                            )
-                          ) : (
-                            <Chip
-                              label="PENDIENTE"
-                              color="default"
-                              size="small"
-                              variant="outlined"
-                            />
-                          )}
+                          </Box>
                         </TableCell>
-                      )}
-                      {verificationMode && (
+                        <TableCell>
+                          {item.expiry_date
+                            ? new Date(item.expiry_date).toLocaleDateString()
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={status.label}
+                            color={status.color as ChipProps["color"]}
+                            size="small"
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={statusInfo.label}
+                            color={statusInfo.color}
+                            size="small"
+                            variant={item.status === "pending" ? "outlined" : "filled"}
+                            sx={{ fontWeight: "bold" }}
+                          />
+                        </TableCell>
                         <TableCell>
                           <Button
-                            variant={isVerified ? "outlined" : "contained"}
+                            variant={item.status !== "pending" ? "outlined" : "contained"}
                             size="small"
-                            color={isVerified ? "success" : "primary"}
+                            color={item.status !== "pending" ? "success" : "primary"}
                             onClick={() => handleOpenVerifyDialog(item)}
-                            startIcon={
-                              isVerified ? <EditIcon /> : <VerifiedIcon />
-                            }
+                            startIcon={item.status !== "pending" ? <EditIcon /> : <VerifiedIcon />}
                           >
-                            {isVerified ? "Editar" : "Verificar"}
+                            {item.status !== "pending" ? "Editar" : "Verificar"}
                           </Button>
                         </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
+                      </TableRow>
+                    );
+                  })}
               </TableBody>
             </Table>
           </TableContainer>
@@ -1046,17 +1108,17 @@ export default function ValidationsPage() {
       >
         <DialogTitle>Verificar Item de Inventario</DialogTitle>
         <DialogContent>
-          {currentItem && (
+          {currentValidationItem && (
             <Box sx={{ pt: 2 }}>
               <Typography variant="subtitle1" gutterBottom>
-                {getProductName(currentItem.product_id)}
+                {currentValidationItem.product_name || "N/A"}
               </Typography>
               <Typography variant="body2" gutterBottom>
-                <strong>Lote:</strong> {currentItem.batch_number || "N/A"}
+                <strong>Lote:</strong> {currentValidationItem.batch_number || "N/A"}
               </Typography>
               <Typography variant="body2" gutterBottom sx={{ mb: 2 }}>
                 <strong>Cantidad en Sistema:</strong>{" "}
-                {currentItem.quantity_available}
+                {currentValidationItem.expected_quantity}
               </Typography>
 
               <TextField
@@ -1072,18 +1134,18 @@ export default function ValidationsPage() {
                 helperText="Ingrese la cantidad física contada"
               />
 
-              {actualQuantity !== currentItem.quantity_available && (
+              {actualQuantity !== currentValidationItem.expected_quantity && (
                 <Alert
                   severity={
-                    actualQuantity < currentItem.quantity_available
+                    actualQuantity < currentValidationItem.expected_quantity
                       ? "warning"
                       : "info"
                   }
                   sx={{ mt: 2 }}
                 >
-                  Diferencia: {actualQuantity - currentItem.quantity_available}{" "}
+                  Diferencia: {actualQuantity - currentValidationItem.expected_quantity}{" "}
                   unidades
-                  {actualQuantity < currentItem.quantity_available
+                  {actualQuantity < currentValidationItem.expected_quantity
                     ? " (Faltante)"
                     : " (Sobrante)"}
                 </Alert>

@@ -18,13 +18,15 @@ export async function GET() {
     const client = await pool.connect();
     try {
       const result = await client.query(`
-        SELECT 
+        SELECT
           i.*,
           p.name as product_name,
           p.description as product_description,
-          p.category as product_category
+          p.category as product_category,
+          a.name as area_name
         FROM inventory i
         LEFT JOIN products p ON i.product_id = p.product_id
+        LEFT JOIN inventory_areas a ON i.area_id = a.area_id
         ORDER BY i.inventory_id DESC
       `);
       if (!result.rows) {
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
       batch_number,
       expiry_date,
       quantity_available,
-      location,
+      area_id,
       purchase_price,
       sale_price
     } = data;
@@ -61,11 +63,11 @@ export async function POST(request: NextRequest) {
     try {
       const result = await client.query(`
         INSERT INTO inventory (
-          product_id, batch_number, expiry_date, quantity_available, 
-          location, purchase_price, sale_price, created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+          product_id, batch_number, expiry_date, quantity_available,
+          area_id, purchase_price, sale_price, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *`,
-        [product_id, batch_number, expiry_date, quantity_available, location, purchase_price, sale_price, session?.userId ?? null]
+        [product_id, batch_number, expiry_date, quantity_available, area_id || null, purchase_price, sale_price, session?.userId ?? null]
       );
 
       await logAudit(session?.userId ?? null, "create", "inventory", result.rows[0].inventory_id, { product_id, quantity_available });

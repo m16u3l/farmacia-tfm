@@ -24,6 +24,7 @@ import PeopleIcon from "@mui/icons-material/GroupsOutlined";
 import BadgeIcon from "@mui/icons-material/BadgeOutlined";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
+import AccountTreeIcon from "@mui/icons-material/AccountTreeOutlined";
 import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import LocalPharmacyIcon from "@mui/icons-material/LocalPharmacy";
 import Link from "next/link";
@@ -57,6 +58,8 @@ const menuGroups = [
     items: [
       { text: "Productos", icon: <StorefrontIcon />, href: "/products" },
       { text: "Inventario", icon: <InventoryIcon />, href: "/inventory" },
+      { text: "Áreas", icon: <AccountTreeIcon />, href: "/areas" },
+      { text: "Reportes", icon: <AssessmentIcon />, href: "/validations" },
       { text: "Ventas", icon: <ShoppingCartIcon />, href: "/sells" },
       { text: "Órdenes de compra", icon: <LocalMallIcon />, href: "/orders" },
       { text: "Proveedores", icon: <LocalShippingIcon />, href: "/suppliers" },
@@ -67,7 +70,6 @@ const menuGroups = [
     items: [
       { text: "Empleados", icon: <BadgeIcon />, href: "/employees" },
       { text: "Usuarios", icon: <PeopleIcon />, href: "/users" },
-      { text: "Reportes", icon: <AssessmentIcon />, href: "/validations" },
       { text: "Configuración", icon: <SettingsIcon />, href: "/configuracion" },
     ],
   },

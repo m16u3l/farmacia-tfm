@@ -79,7 +79,27 @@ CREATE TABLE IF NOT EXISTS suppliers (
 );
 
 -- -----------------------------------------------------------------------------
--- 4. inventory — lotes de existencias, vinculados a products
+-- 4. inventory_areas — ubicaciones físicas del inventario (sucursal, almacén,
+--    estante, etc.), jerárquicas vía parent_area_id
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS inventory_areas (
+  area_id        SERIAL PRIMARY KEY,
+  name           VARCHAR(100) NOT NULL,
+  type           VARCHAR(20) NOT NULL DEFAULT 'otro'
+                 CHECK (type IN ('sucursal', 'almacen', 'estante', 'otro')),
+  -- RESTRICT: no se puede borrar un área mientras tenga sub-áreas (evita huérfanos
+  -- silenciosos). Los ciclos (un área como su propio ancestro) se validan en la API,
+  -- Postgres no lo puede verificar solo con una FK/CHECK.
+  parent_area_id INTEGER REFERENCES inventory_areas(area_id) ON DELETE RESTRICT,
+  is_active      BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at     TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_areas_parent_area_id ON inventory_areas(parent_area_id);
+
+-- -----------------------------------------------------------------------------
+-- 5. inventory — lotes de existencias, vinculados a products
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS inventory (
   inventory_id           SERIAL PRIMARY KEY,
@@ -90,7 +110,10 @@ CREATE TABLE IF NOT EXISTS inventory (
   -- conviene confirmarlo con el proveedor o el empaque físico.
   expiry_is_approximate    BOOLEAN NOT NULL DEFAULT FALSE,
   quantity_available       INTEGER NOT NULL DEFAULT 0 CHECK (quantity_available >= 0),
-  location                  VARCHAR(100),
+  -- SET NULL (no RESTRICT): borrar un área no debe bloquearse solo por stock
+  -- histórico; la API bloquea el DELETE de áreas con inventario activo antes
+  -- de llegar a este punto.
+  area_id                   INTEGER REFERENCES inventory_areas(area_id) ON DELETE SET NULL,
   purchase_price            NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (purchase_price >= 0),
   sale_price                NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (sale_price >= 0),
   created_by                INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -99,9 +122,10 @@ CREATE TABLE IF NOT EXISTS inventory (
 
 CREATE INDEX IF NOT EXISTS idx_inventory_product_id ON inventory(product_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_expiry_date ON inventory(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_inventory_area_id ON inventory(area_id);
 
 -- -----------------------------------------------------------------------------
--- 5. employees — personal de la farmacia (ficha de RR.HH., no necesariamente
+-- 6. employees — personal de la farmacia (ficha de RR.HH., no necesariamente
 --    tiene acceso al sistema; para eso ver "users")
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS employees (
@@ -119,7 +143,7 @@ ALTER TABLE users
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE SET NULL;
 
 -- -----------------------------------------------------------------------------
--- 6. orders + order_items — órdenes de compra a proveedores
+-- 7. orders + order_items — órdenes de compra a proveedores
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS orders (
   order_id      SERIAL PRIMARY KEY,
@@ -143,7 +167,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_supplier_id ON orders(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 
 -- -----------------------------------------------------------------------------
--- 7. sells + sell_items — ventas al público
+-- 8. sells + sell_items — ventas al público
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sells (
   sell_id         SERIAL PRIMARY KEY,
@@ -169,7 +193,7 @@ CREATE INDEX IF NOT EXISTS idx_sell_items_sell_id ON sell_items(sell_id);
 CREATE INDEX IF NOT EXISTS idx_sell_items_inventory_id ON sell_items(inventory_id);
 
 -- -----------------------------------------------------------------------------
--- 8. configuracion — parámetros generales del sistema (vista /configuracion)
+-- 9. configuracion — parámetros generales del sistema (vista /configuracion)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS configuracion (
   id                          SERIAL PRIMARY KEY,
@@ -178,7 +202,7 @@ CREATE TABLE IF NOT EXISTS configuracion (
 );
 
 -- -----------------------------------------------------------------------------
--- 9. audit_log — bitácora de cambios (quién hizo qué y cuándo)
+-- 10. audit_log — bitácora de cambios (quién hizo qué y cuándo)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS audit_log (
   id           SERIAL PRIMARY KEY,
@@ -193,6 +217,73 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at);
+
+-- -----------------------------------------------------------------------------
+-- 11. inventory_movements — historial de transferencias de inventario entre áreas
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS inventory_movements (
+  movement_id               SERIAL PRIMARY KEY,
+  -- SET NULL: un movimiento histórico sigue siendo válido como bitácora aunque
+  -- la fila de inventario puntual ya no exista (p.ej. se vendió/eliminó después).
+  source_inventory_id       INTEGER REFERENCES inventory(inventory_id) ON DELETE SET NULL,
+  destination_inventory_id  INTEGER REFERENCES inventory(inventory_id) ON DELETE SET NULL,
+  -- Se denormalizan las áreas de origen/destino para que el historial siga
+  -- siendo legible aunque las filas de inventory referenciadas cambien después.
+  source_area_id            INTEGER REFERENCES inventory_areas(area_id) ON DELETE SET NULL,
+  destination_area_id       INTEGER REFERENCES inventory_areas(area_id) ON DELETE SET NULL,
+  quantity                  INTEGER NOT NULL CHECK (quantity > 0),
+  notes                     TEXT,
+  moved_by                  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  moved_at                  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_source_inventory_id ON inventory_movements(source_inventory_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_destination_inventory_id ON inventory_movements(destination_inventory_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_moved_at ON inventory_movements(moved_at);
+
+-- -----------------------------------------------------------------------------
+-- 12. inventory_validations + inventory_validation_items — sesiones de
+--     auditoría de inventario (por área, próximos a vencer, vencidos, bajo stock)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS inventory_validations (
+  validation_id  SERIAL PRIMARY KEY,
+  -- area: cuenta física de un área/ubicación puntual (area_id obligatorio).
+  -- expiring / expired / low_stock: snapshot por filtro, no por área.
+  type           VARCHAR(20) NOT NULL
+                 CHECK (type IN ('area', 'expiring', 'expired', 'low_stock')),
+  area_id        INTEGER REFERENCES inventory_areas(area_id) ON DELETE SET NULL,
+  status         VARCHAR(20) NOT NULL DEFAULT 'in_progress'
+                 CHECK (status IN ('in_progress', 'completed', 'cancelled')),
+  notes          TEXT,
+  started_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  started_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+  completed_at   TIMESTAMP,
+  CONSTRAINT inventory_validations_area_id_consistency
+    CHECK ((type = 'area' AND area_id IS NOT NULL) OR (type <> 'area'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_validations_status ON inventory_validations(status);
+CREATE INDEX IF NOT EXISTS idx_inventory_validations_type ON inventory_validations(type);
+
+CREATE TABLE IF NOT EXISTS inventory_validation_items (
+  validation_item_id  SERIAL PRIMARY KEY,
+  validation_id        INTEGER NOT NULL REFERENCES inventory_validations(validation_id) ON DELETE CASCADE,
+  -- SET NULL: el ítem de validación es un registro histórico de auditoría;
+  -- sobrevive aunque el lote de inventario referenciado se elimine después.
+  inventory_id         INTEGER REFERENCES inventory(inventory_id) ON DELETE SET NULL,
+  -- Snapshot de la cantidad esperada al iniciar la sesión — no se recalcula si
+  -- inventory.quantity_available cambia después (venta, transferencia, etc.).
+  expected_quantity    INTEGER NOT NULL,
+  actual_quantity      INTEGER,
+  status               VARCHAR(20) NOT NULL DEFAULT 'pending'
+                       CHECK (status IN ('pending', 'confirmed', 'inconsistent', 'not_found')),
+  notes                TEXT,
+  verified_by          INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  verified_at          TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_validation_items_validation_id ON inventory_validation_items(validation_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_validation_items_inventory_id ON inventory_validation_items(inventory_id);
 
 COMMIT;
 

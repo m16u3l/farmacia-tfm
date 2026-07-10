@@ -16,9 +16,17 @@ export const mockInventory = {
   batch_number: 'BATCH001',
   expiry_date: '2025-12-31',
   quantity_available: 100,
-  location: 'A1',
+  area_id: 1,
   purchase_price: 12.00,
   sale_price: 15.50
+}
+
+export const mockInventoryArea = {
+  area_id: 1,
+  name: 'Estante A',
+  type: 'estante',
+  parent_area_id: null,
+  is_active: true
 }
 
 export const mockEmployee = {

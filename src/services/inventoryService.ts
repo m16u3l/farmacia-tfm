@@ -36,5 +36,12 @@ export const inventoryService = {
 
   async getLowStock(threshold: number = 10): Promise<Inventory[]> {
     return apiRequest<Inventory[]>(`/api/inventory?low_stock=${threshold}`);
+  },
+
+  async transfer(id: number, data: { destination_area_id: number; quantity: number; notes?: string }): Promise<Inventory> {
+    return apiRequest<Inventory>(`/api/inventory/${id}/transfer`, {
+      method: 'POST',
+      body: data
+    });
   }
 };

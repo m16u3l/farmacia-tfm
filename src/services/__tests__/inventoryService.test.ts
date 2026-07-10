@@ -39,7 +39,7 @@ describe('inventoryService', () => {
         batch_number: 'BATCH002',
         expiry_date: '2025-06-30',
         quantity_available: 50,
-        location: 'A1',
+        area_id: 1,
         purchase_price: 10.00,
         sale_price: 15.50
       }
@@ -59,12 +59,12 @@ describe('inventoryService', () => {
 
   describe('update', () => {
     it('should update an inventory item', async () => {
-      const updateData = { 
+      const updateData = {
         product_id: 1,
         batch_number: 'BATCH002',
         expiry_date: '2025-06-30',
-        quantity_available: 75, 
-        location: 'A1',
+        quantity_available: 75,
+        area_id: 1,
         purchase_price: 11.00,
         sale_price: 16.00
       }
@@ -114,6 +114,22 @@ describe('inventoryService', () => {
 
       expect(mockApiRequest).toHaveBeenCalledWith('/api/inventory?product_id=1')
       expect(result).toEqual(mockProductInventory)
+    })
+  })
+
+  describe('transfer', () => {
+    it('should transfer an inventory item to another area', async () => {
+      const transferData = { destination_area_id: 2, quantity: 5, notes: 'Reposición de estante' }
+      const mockTransferredItem = { ...mockInventory, quantity_available: 95 }
+      mockApiRequest.mockResolvedValue(mockTransferredItem)
+
+      const result = await inventoryService.transfer(1, transferData)
+
+      expect(mockApiRequest).toHaveBeenCalledWith('/api/inventory/1/transfer', {
+        method: 'POST',
+        body: transferData
+      })
+      expect(result).toEqual(mockTransferredItem)
     })
   })
 })

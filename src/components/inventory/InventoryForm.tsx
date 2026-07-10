@@ -8,13 +8,15 @@ import {
   MenuItem,
   Grid,
 } from "@mui/material";
-import { InventoryFormData, Product } from "@/types";
+import { InventoryArea, InventoryFormData, Product } from "@/types";
+import { buildAreaOptions } from "@/utils/areaTree";
 
 interface InventoryFormProps {
   open: boolean;
   isEditing: boolean;
   formData: InventoryFormData;
   products: Product[];
+  areas: InventoryArea[];
   onClose: () => void;
   onSubmit: (data: InventoryFormData) => void;
   onChange: (field: keyof InventoryFormData, value: string | number | null) => void;
@@ -25,10 +27,12 @@ export function InventoryForm({
   isEditing,
   formData,
   products,
+  areas,
   onClose,
   onSubmit,
   onChange,
 }: InventoryFormProps) {
+  const areaOptions = buildAreaOptions(areas);
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
@@ -89,11 +93,21 @@ export function InventoryForm({
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
+                select
                 label="Ubicación"
                 fullWidth
-                value={formData.location ?? ""}
-                onChange={(e) => onChange("location", e.target.value)}
-              />
+                value={formData.area_id ?? ""}
+                onChange={(e) => onChange("area_id", e.target.value ? parseInt(e.target.value) : null)}
+              >
+                <MenuItem value="">
+                  <em>Sin asignar</em>
+                </MenuItem>
+                {areaOptions.map(({ area, depth, label }) => (
+                  <MenuItem key={area.area_id} value={area.area_id} sx={{ pl: 2 + depth * 2 }}>
+                    {label}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
