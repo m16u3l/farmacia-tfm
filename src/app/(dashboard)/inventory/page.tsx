@@ -281,6 +281,14 @@ export default function InventoryPage() {
                 sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
               />
             )}
+            {params.row.expiry_is_approximate && (
+              <Chip
+                label="Fecha aprox."
+                variant="outlined"
+                size="small"
+                sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
+              />
+            )}
           </Box>
         );
       },

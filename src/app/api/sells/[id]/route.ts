@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(request: Request, context: unknown) {
   const { params } = context as { params: { id: string } };
@@ -67,6 +69,9 @@ export async function PUT(request: Request, context: unknown) {
       // Confirmar la transacción
       await client.query("COMMIT");
 
+      const session = await getSessionFromRequest(request as NextRequest);
+      await logAudit(session?.userId ?? null, "update", "sell", Number(params.id), { total });
+
       return NextResponse.json({ id: params.id });
     } catch (error) {
       // Revertir la transacción en caso de error
@@ -99,6 +104,9 @@ export async function DELETE(request: Request, context: unknown) {
 
       // Confirmar la transacción
       await client.query("COMMIT");
+
+      const session = await getSessionFromRequest(request as NextRequest);
+      await logAudit(session?.userId ?? null, "delete", "sell", Number(params.id));
 
       return NextResponse.json({});
     } catch (error) {

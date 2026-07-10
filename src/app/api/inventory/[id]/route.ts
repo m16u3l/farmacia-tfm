@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
@@ -42,7 +44,7 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
@@ -60,11 +62,12 @@ export async function PUT(
 
     const client = await pool.connect();
     try {
+      // Una edición manual del vencimiento se considera confirmada (ya no aproximada)
       const result = await client.query(
         `UPDATE inventory 
          SET product_id = $1, batch_number = $2, expiry_date = $3, 
              quantity_available = $4, location = $5, purchase_price = $6, 
-             sale_price = $7
+             sale_price = $7, expiry_is_approximate = FALSE
          WHERE inventory_id = $8
          RETURNING *`,
         [product_id, batch_number, expiry_date, quantity_available, location, purchase_price, sale_price, params.id]
@@ -76,6 +79,9 @@ export async function PUT(
           { status: 404 }
         );
       }
+
+      const session = await getSessionFromRequest(request);
+      await logAudit(session?.userId ?? null, "update", "inventory", Number(params.id), { product_id, quantity_available });
 
       return NextResponse.json(result.rows[0]);
     } finally {
@@ -91,7 +97,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
@@ -109,6 +115,9 @@ export async function DELETE(
           { status: 404 }
         );
       }
+
+      const session = await getSessionFromRequest(request);
+      await logAudit(session?.userId ?? null, "delete", "inventory", Number(params.id));
 
       return NextResponse.json({ message: "Elemento del inventario eliminado correctamente" });
     } finally {

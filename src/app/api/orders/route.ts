@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,7 +42,7 @@ export async function GET() {
 }
 
 // POST - Crear nueva orden
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { supplier_id, order_date, status, total_amount, items } = body;
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const session = await getSessionFromRequest(request);
     const client = await pool.connect();
     
     try {
@@ -60,10 +63,10 @@ export async function POST(request: Request) {
 
       // Insertar orden
       const orderResult = await client.query(
-        `INSERT INTO orders (supplier_id, order_date, status, total_amount)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO orders (supplier_id, order_date, status, total_amount, created_by)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [supplier_id, order_date || new Date().toISOString(), status || 'pendiente', total_amount]
+        [supplier_id, order_date || new Date().toISOString(), status || 'pendiente', total_amount, session?.userId ?? null]
       );
 
       const order = orderResult.rows[0];
@@ -78,7 +81,9 @@ export async function POST(request: Request) {
       }
 
       await client.query("COMMIT");
-      
+
+      await logAudit(session?.userId ?? null, "create", "order", order.order_id, { supplier_id, total_amount });
+
       return NextResponse.json(order, { status: 201 });
     } catch (error) {
       await client.query("ROLLBACK");

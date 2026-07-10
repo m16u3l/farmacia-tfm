@@ -1,0 +1,49 @@
+fila_excel,motivo,datos
+40,"sin nombre de producto, se excluyó del import","{'Index': 40, 'source_row': 40, 'name': nan, 'stock': 0.0, 'presentation': nan, 'expiry_raw': nan, 'purchase_price': nan, 'sale_price': 0.0, 'description': 'anticoagulante', 'location': nan}"
+70,"sin nombre de producto, se excluyó del import","{'Index': 70, 'source_row': 70, 'name': nan, 'stock': 0.0, 'presentation': 'vial', 'expiry_raw': datetime.datetime(2024, 1, 27, 0, 0), 'purchase_price': 10.0, 'sale_price': 13.0, 'description': 'infecciones severas ', 'location': '11-B'}"
+174,"sin nombre de producto, se excluyó del import","{'Index': 174, 'source_row': 174, 'name': nan, 'stock': 1.0, 'presentation': 'colirio', 'expiry_raw': datetime.datetime(2025, 4, 1, 0, 0), 'purchase_price': nan, 'sale_price': nan, 'description': nan, 'location': '2-A'}"
+374,"sin nombre de producto, se excluyó del import","{'Index': 375, 'source_row': 374, 'name': NaT, 'stock': NaT, 'presentation': NaT, 'expiry_raw': NaT, 'purchase_price': NaT, 'sale_price': NaT, 'description': NaT, 'location': NaT}"
+376,"sin nombre de producto, se excluyó del import","{'Index': 377, 'source_row': 376, 'name': nan, 'stock': 0.0, 'presentation': 'Ampolla', 'expiry_raw': datetime.datetime(2025, 1, 1, 0, 0), 'purchase_price': 2.0, 'sale_price': 2.6, 'description': 'Vitamina C', 'location': nan}"
+383,"sin nombre de producto, se excluyó del import","{'Index': 384, 'source_row': 383, 'name': nan, 'stock': nan, 'presentation': nan, 'expiry_raw': nan, 'purchase_price': nan, 'sale_price': 0.0, 'description': nan, 'location': nan}"
+377,nombre inválido (solo dígitos); se usó la descripción como nombre,nombre_original='0' -> 'Vitamina K'
+7,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='actifem' original='2027' -> 2027-01-01
+11,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='aguja pediatrica' original='1900-01-27 00:00:00'
+46,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='bahia 90' original='08//2028' -> 2028-01-01
+63,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='butilbromuro de hiosina10mg' original='2027' -> 2027-01-01
+74,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='cepillo de nino' original='1900-01-27 00:00:00'
+89,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='clotrimazol 1%' original='2029' -> 2029-01-01
+98,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='Cotrimoxazol forte \n400mg/80mg' original='2028' -> 2028-01-01
+102,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='crema placenta' original='1900-01-26 00:00:00'
+112,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='Demotil AG' original='17/2026' -> 2026-01-01
+118,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='dexametasona8' original='2028' -> 2028-01-01
+124,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='Dextrometorfano 10mg' original='2027' -> 2027-01-01
+125,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='Dextrometorfano 15mg.' original='2027' -> 2027-01-01
+126,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='dextroton' original='2028' -> 2028-01-01
+128,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='diclofenaco inquibol' original='2030' -> 2030-01-01
+130,texto en 'location' no parece ubicación; se movió a instrucción de dosis,producto='diclofenaco 2' texto='cajon'
+132,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='diclofenaco 100' original='2027' -> 2027-01-01
+134,texto en 'location' no parece ubicación; se movió a instrucción de dosis,producto='Diclofenaco 75mg' texto='cajon'
+134,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='Diclofenaco 75mg' original='2028' -> 2028-01-01
+138,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='diclonic 250mg' original='2027' -> 2027-01-01
+141,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='difem' original='2029' -> 2029-01-01
+182,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='glucovance' original='2027' -> 2027-01-01
+201,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='jeringas 10' original='2028' -> 2028-01-01
+209,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='kotex' original='1900-01-26 00:00:00'
+220,texto en 'location' no parece ubicación; se movió a instrucción de dosis,producto='lidocaina' texto='cajón'
+220,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='lidocaina' original='12/12206'
+221,texto en 'location' no parece ubicación; se movió a instrucción de dosis,producto='Lidocaina 1%' texto='cajón'
+222,texto en 'location' no parece ubicación; se movió a instrucción de dosis,producto='Lidocaína 1% 5ml' texto='cajon'
+242,texto en 'location' no parece ubicación; se movió a instrucción de dosis,producto='Metoclopramida 10mg/2ml' texto='cajón'
+251,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='mordedor de bebe' original='1900-01-25 00:00:00'
+258,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='nixorosario' original='1900-01-26 00:00:00'
+260,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='nosotras ( antibacterial)' original='00:00:00'
+314,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='reumacin' original='1900-01-25 00:00:00'
+316,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='sal inglesa' original='2027' -> 2027-01-01
+346,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='toallas femeninas' original='1900-01-27 00:00:00'
+356,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='unguento leon' original='1900-01-26 00:00:00'
+361,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='Vagicural plus' original='2027' -> 2027-01-01
+385,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='jeringa para insulina' original='1905-07-20 00:00:00'
+411,fecha de vencimiento inválida/ilegible; se dejó vacía,producto='jabon de oliva' original='1905-07-19 00:00:00'
+415,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='selene' original='2028' -> 2028-01-01
+416,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='lindavel' original='2028' -> 2028-01-01
+417,fecha de vencimiento incompleta/errónea; se aproximó a 1-enero,producto='nistatina' original='2027' -> 2027-01-01

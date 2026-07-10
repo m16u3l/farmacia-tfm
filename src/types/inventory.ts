@@ -5,6 +5,7 @@ export interface Inventory {
   product_id: number;
   batch_number?: string | null;
   expiry_date?: string | null;
+  expiry_is_approximate?: boolean;
   quantity_available: number;
   location?: string | null;
   purchase_price: number;

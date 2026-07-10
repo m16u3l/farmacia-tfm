@@ -19,6 +19,8 @@ import { User, UserFormData } from "@/types/user";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useUsers } from "@/hooks/useUsers";
 import { PageHeader } from "@/components/layout/PageHeader";
+import Chip from "@mui/material/Chip";
+import { ROLE_LABELS } from "@/lib/permissions";
 
 function LoadingState() {
   return (
@@ -66,6 +68,8 @@ export default function UsersPage() {
     first_name: "",
     last_name: "",
     email: "",
+    role: "cajero",
+    is_active: true,
   });
 
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function UsersPage() {
   };
 
   const handleEdit = (usuario: User) => {
-    setFormData(usuario);
+    setFormData({ ...usuario, password: "" });
     setIsEditing(true);
     setOpenDialog(true);
   };
@@ -94,11 +98,11 @@ export default function UsersPage() {
   };
 
   const resetForm = () => {
-    setFormData({ first_name: "", last_name: "", email: "" });
+    setFormData({ first_name: "", last_name: "", email: "", role: "cajero", is_active: true });
     setIsEditing(false);
   };
 
-  const handleFormChange = (field: keyof UserFormData, value: string) => {
+  const handleFormChange = (field: keyof UserFormData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -221,6 +225,33 @@ function useUsersColumns({
       headerName: "Correo",
       flex: 1.5,
       minWidth: 200,
+    },
+    {
+      field: "role",
+      headerName: "Rol",
+      flex: 1,
+      minWidth: 130,
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip
+          size="small"
+          label={ROLE_LABELS[params.value as keyof typeof ROLE_LABELS] || params.value}
+          color={params.value === "admin" ? "secondary" : "default"}
+        />
+      ),
+    },
+    {
+      field: "is_active",
+      headerName: "Estado",
+      flex: 0.8,
+      minWidth: 110,
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip
+          size="small"
+          label={params.value ? "Activo" : "Inactivo"}
+          color={params.value ? "success" : "default"}
+          variant={params.value ? "filled" : "outlined"}
+        />
+      ),
     },
     {
       field: "actions",

@@ -6,6 +6,7 @@ export interface Product {
   type?: string | null;
   dosage_form?: string | null;
   unit?: string | null;
+  dosage_instructions?: string | null;
   barcode?: string | null;
   status: boolean;
 }

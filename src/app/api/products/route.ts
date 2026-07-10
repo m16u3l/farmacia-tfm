@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 // Helper function for error responses with CORS
 const errorResponse = (error: unknown, message: string) => {
@@ -63,7 +65,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
@@ -73,16 +75,19 @@ export async function POST(request: Request) {
       type,
       dosage_form,
       unit,
+      dosage_instructions,
       barcode,
       status,
     } = body;
     const client = await pool.connect();
     try {
+      const session = await getSessionFromRequest(request);
       const result = await client.query(
-        `INSERT INTO products (name, description, category, type, dosage_form, unit, barcode, status)
-				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-        [name, description, category, type, dosage_form, unit, barcode, status]
+        `INSERT INTO products (name, description, category, type, dosage_form, unit, dosage_instructions, barcode, status, created_by)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+        [name, description, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, status, session?.userId ?? null]
       );
+      await logAudit(session?.userId ?? null, "create", "product", result.rows[0].product_id, { name });
       return NextResponse.json(result.rows[0]);
     } finally {
       client.release();

@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -41,7 +43,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     const {
@@ -54,17 +56,20 @@ export async function POST(request: Request) {
       sale_price
     } = data;
 
+    const session = await getSessionFromRequest(request);
     const client = await pool.connect();
     try {
       const result = await client.query(`
         INSERT INTO inventory (
           product_id, batch_number, expiry_date, quantity_available, 
-          location, purchase_price, sale_price
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7) 
+          location, purchase_price, sale_price, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
         RETURNING *`,
-        [product_id, batch_number, expiry_date, quantity_available, location, purchase_price, sale_price]
+        [product_id, batch_number, expiry_date, quantity_available, location, purchase_price, sale_price, session?.userId ?? null]
       );
-      
+
+      await logAudit(session?.userId ?? null, "create", "inventory", result.rows[0].inventory_id, { product_id, quantity_available });
+
       return NextResponse.json(result.rows[0], { headers: corsHeaders });
     } finally {
       client.release();

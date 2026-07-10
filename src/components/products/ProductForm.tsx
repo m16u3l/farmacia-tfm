@@ -128,6 +128,15 @@ export function ProductForm({
             value={formData.barcode ?? ""}
             onChange={(e) => onChange("barcode", e.target.value)}
           />
+          <TextField
+            margin="dense"
+            label="Instrucciones de dosificación"
+            fullWidth
+            placeholder="Ej. cada 12 horas, adultos"
+            helperText="Opcional. Indicación de uso o posología del producto."
+            value={formData.dosage_instructions ?? ""}
+            onChange={(e) => onChange("dosage_instructions", e.target.value)}
+          />
           <FormControlLabel
             control={
               <Switch

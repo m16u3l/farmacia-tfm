@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -8,6 +9,8 @@ import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
+import Avatar from "@mui/material/Avatar";
+import Chip from "@mui/material/Chip";
 
 import { styled, useTheme } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
@@ -21,10 +24,11 @@ import PeopleIcon from "@mui/icons-material/GroupsOutlined";
 import BadgeIcon from "@mui/icons-material/BadgeOutlined";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
-import ArrowBackIcon from "@mui/icons-material/ArrowBackOutlined";
+import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import LocalPharmacyIcon from "@mui/icons-material/LocalPharmacy";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { roleCanAccess, ROLE_LABELS, UserRole } from "@/lib/permissions";
 
 const DrawerHeader = styled("div")(({ theme }) => ({
   display: "flex",
@@ -68,10 +72,42 @@ const menuGroups = [
   },
 ];
 
+interface CurrentUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: UserRole;
+}
+
 export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {}) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then(setUser)
+      .catch(() => setUser(null));
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  };
+
+  const visibleGroups = menuGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !user || roleCanAccess(user.role, item.href)
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const drawerContent = (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -88,7 +124,7 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
       </DrawerHeader>
 
       <Box sx={{ flexGrow: 1, overflowY: "auto", py: 1 }}>
-        {menuGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <Box key={group.label} sx={{ mb: 1 }}>
             <Typography
               variant="overline"
@@ -154,24 +190,49 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
       </Box>
 
       <Divider />
+      {user && (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 2, py: 1.5 }}>
+          <Avatar sx={{ bgcolor: "primary.main", width: 36, height: 36, fontSize: "0.9rem" }}>
+            {user.first_name?.[0]}
+            {user.last_name?.[0]}
+          </Avatar>
+          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+            >
+              {user.first_name} {user.last_name}
+            </Typography>
+            <Chip
+              label={ROLE_LABELS[user.role]}
+              size="small"
+              sx={{ height: 18, fontSize: "0.65rem", mt: 0.25 }}
+            />
+          </Box>
+        </Box>
+      )}
       <ListItem
-        component={Link}
-        href="/"
-        onClick={isMobile ? onMobileToggle : undefined}
+        component="button"
+        onClick={handleLogout}
         sx={{
           color: "text.secondary",
           mx: 1.5,
-          my: 1,
+          mb: 1,
           borderRadius: 2,
           width: "auto",
+          border: "none",
+          bgcolor: "transparent",
+          cursor: "pointer",
+          font: "inherit",
+          textAlign: "left",
           "&:hover": { backgroundColor: "rgba(14, 124, 102, 0.06)" },
         }}
       >
         <ListItemIcon sx={{ minWidth: 38, color: "text.secondary" }}>
-          <ArrowBackIcon fontSize="small" />
+          <LogoutIcon fontSize="small" />
         </ListItemIcon>
         <ListItemText
-          primary="Volver al sitio"
+          primary="Cerrar sesión"
           sx={{ "& .MuiListItemText-primary": { fontSize: "0.85rem" } }}
         />
       </ListItem>

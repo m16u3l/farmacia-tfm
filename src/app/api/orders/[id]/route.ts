@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 // GET - Obtener una orden específica
 export async function GET(request: Request, context: unknown) {
@@ -97,6 +99,9 @@ export async function PUT(request: Request, context: unknown) {
 
       await client.query("COMMIT");
 
+      const session = await getSessionFromRequest(request as NextRequest);
+      await logAudit(session?.userId ?? null, "update", "order", Number(id), { status, total_amount });
+
       return NextResponse.json(result.rows[0]);
     } catch (error) {
       await client.query("ROLLBACK");
@@ -141,6 +146,9 @@ export async function DELETE(request: Request, context: unknown) {
       }
 
       await client.query("COMMIT");
+
+      const session = await getSessionFromRequest(request as NextRequest);
+      await logAudit(session?.userId ?? null, "delete", "order", Number(id));
 
       return NextResponse.json({ message: "Orden eliminada correctamente" });
     } catch (error) {

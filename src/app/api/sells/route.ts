@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+import { logAudit } from "@/lib/audit";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,10 +59,11 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
     const { customer_name, employee_id, payment_method, items } = data;
+    const session = await getSessionFromRequest(request);
     const client = await pool.connect();
 
     try {
@@ -80,9 +83,9 @@ export async function POST(request: Request) {
 
       // Insertar la venta
       const sellResult = await client.query(
-        `INSERT INTO sells (customer_name, employee_id, payment_method, sell_date)
-         VALUES ($1, $2, $3, NOW()) RETURNING sell_id`,
-        [customer_name, finalEmployeeId, payment_method]
+        `INSERT INTO sells (customer_name, employee_id, user_id, payment_method, sell_date)
+         VALUES ($1, $2, $3, $4, NOW()) RETURNING sell_id`,
+        [customer_name, finalEmployeeId, session?.userId ?? null, payment_method]
       );
 
       const sellId = sellResult.rows[0].sell_id;
@@ -121,6 +124,8 @@ export async function POST(request: Request) {
 
       // Confirmar la transacción
       await client.query('COMMIT');
+
+      await logAudit(session?.userId ?? null, "create", "sell", sellId, { total, items: items.length });
 
       return NextResponse.json({ id: sellId }, { status: 201 });
     } catch (error) {
