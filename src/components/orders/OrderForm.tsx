@@ -9,6 +9,7 @@ import {
   IconButton,
   Box,
   Typography,
+  Grid,
 } from "@mui/material";
 import { OrderFormData, OrderItem, Supplier, Product } from "@/types";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -71,11 +72,11 @@ export function OrderForm({
 
   const addItem = () => {
     if (
-      newItem.product_id && 
+      newItem.product_id &&
       newItem.product_id > 0 &&
-      newItem.quantity && 
+      newItem.quantity &&
       newItem.quantity > 0 &&
-      newItem.unit_price !== undefined && 
+      newItem.unit_price !== undefined &&
       newItem.unit_price >= 0 &&
       !isNaN(newItem.quantity) &&
       !isNaN(newItem.unit_price)
@@ -85,7 +86,7 @@ export function OrderForm({
         quantity: Number(newItem.quantity),
         unit_price: Number(newItem.unit_price),
       } as OrderItem;
-      
+
       onChange("items", [...(formData.items || []), itemToAdd]);
       setNewItem({ product_id: 0, quantity: 0, unit_price: 0 });
     }
@@ -106,42 +107,46 @@ export function OrderForm({
           {isEditing ? "Editar Pedido" : "Nuevo Pedido"}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            select
-            margin="dense"
-            label="Proveedor"
-            fullWidth
-            value={formData.supplier_id}
-            onChange={(e) => onChange("supplier_id", parseInt(e.target.value))}
-            required
-          >
-            <MenuItem value={0} disabled>
-              Selecciona un proveedor
-            </MenuItem>
-            {suppliers.map((supplier) => (
-              <MenuItem key={supplier.supplier_id} value={supplier.supplier_id}>
-                {supplier.name}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          {isEditing && (
-            <TextField
-              select
-              margin="dense"
-              label="Estado"
-              fullWidth
-              value={formData.status}
-              onChange={(e) => onChange("status", e.target.value)}
-              required
-            >
-              {ORDER_STATUS.map((status) => (
-                <MenuItem key={status} value={status}>
-                  {status}
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} sm={isEditing ? 6 : 12}>
+              <TextField
+                select
+                label="Proveedor"
+                fullWidth
+                value={formData.supplier_id}
+                onChange={(e) => onChange("supplier_id", parseInt(e.target.value))}
+                required
+              >
+                <MenuItem value={0} disabled>
+                  Selecciona un proveedor
                 </MenuItem>
-              ))}
-            </TextField>
-          )}
+                {suppliers.map((supplier) => (
+                  <MenuItem key={supplier.supplier_id} value={supplier.supplier_id}>
+                    {supplier.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+
+            {isEditing && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  select
+                  label="Estado"
+                  fullWidth
+                  value={formData.status}
+                  onChange={(e) => onChange("status", e.target.value)}
+                  required
+                >
+                  {ORDER_STATUS.map((status) => (
+                    <MenuItem key={status} value={status}>
+                      {status}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            )}
+          </Grid>
 
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
             Items del Pedido
@@ -154,6 +159,7 @@ export function OrderForm({
                 key={index}
                 sx={{
                   display: "flex",
+                  flexWrap: "wrap",
                   gap: 1,
                   alignItems: "center",
                   mb: 1,
@@ -167,7 +173,7 @@ export function OrderForm({
                   value={product?.name || `ID: ${item.product_id}`}
                   disabled
                   size="small"
-                  sx={{ flex: 2 }}
+                  sx={{ flex: "2 1 160px" }}
                 />
                 <TextField
                   label="Cantidad"
@@ -175,7 +181,7 @@ export function OrderForm({
                   value={item.quantity}
                   disabled
                   size="small"
-                  sx={{ flex: 1 }}
+                  sx={{ flex: "1 1 100px" }}
                 />
                 <TextField
                   label="Precio"
@@ -183,14 +189,14 @@ export function OrderForm({
                   value={item.unit_price}
                   disabled
                   size="small"
-                  sx={{ flex: 1 }}
+                  sx={{ flex: "1 1 100px" }}
                 />
                 <TextField
                   label="Subtotal"
                   value={`$${(item.quantity * item.unit_price)}`}
                   disabled
                   size="small"
-                  sx={{ flex: 1 }}
+                  sx={{ flex: "1 1 100px" }}
                 />
                 <IconButton
                   color="error"
@@ -203,7 +209,7 @@ export function OrderForm({
             );
           })}
 
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", mt: 2, p: 1, border: "1px dashed", borderColor: "primary.main", borderRadius: 1 }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", mt: 2, p: 1, border: "1px dashed", borderColor: "primary.main", borderRadius: 1 }}>
             <TextField
               select
               label="Producto"
@@ -212,7 +218,7 @@ export function OrderForm({
                 setNewItem({ ...newItem, product_id: parseInt(e.target.value) })
               }
               size="small"
-              sx={{ flex: 2 }}
+              sx={{ flex: "2 1 160px" }}
             >
               <MenuItem value={0} disabled>
                 Selecciona un producto
@@ -232,7 +238,7 @@ export function OrderForm({
                 setNewItem({ ...newItem, quantity: isNaN(value) ? 0 : value });
               }}
               size="small"
-              sx={{ flex: 1 }}
+              sx={{ flex: "1 1 100px" }}
               inputProps={{ min: 1 }}
             />
             <TextField
@@ -244,7 +250,7 @@ export function OrderForm({
                 setNewItem({ ...newItem, unit_price: isNaN(value) ? 0 : value });
               }}
               size="small"
-              sx={{ flex: 1 }}
+              sx={{ flex: "1 1 100px" }}
               inputProps={{ step: "0.01", min: 0 }}
             />
             <IconButton color="primary" onClick={addItem} size="small">

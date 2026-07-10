@@ -22,6 +22,7 @@ import PlaceIcon from "@mui/icons-material/PlaceOutlined";
 import AccessTimeIcon from "@mui/icons-material/AccessTimeOutlined";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import PhoneIcon from "@mui/icons-material/Phone";
+import { fluidFontSize } from "@/utils/fluidType";
 
 const WHATSAPP_NUMBER = "59174808111"; // +591 74808111
 const PHONE_DISPLAY = "+591 74808111";
@@ -129,7 +130,7 @@ export default function Home() {
               />
               <Typography
                 variant="h1"
-                sx={{ fontSize: { xs: "2.25rem", sm: "3rem", md: "3.5rem" }, mb: 2 }}
+                sx={{ fontSize: fluidFontSize(2.25, 3.5), mb: 2 }}
               >
                 Tu farmacia de confianza
               </Typography>
@@ -139,7 +140,7 @@ export default function Home() {
                   fontWeight: 400,
                   opacity: 0.92,
                   mb: 4,
-                  fontSize: { xs: "1.1rem", sm: "1.35rem" },
+                  fontSize: fluidFontSize(1.1, 1.35),
                 }}
               >
                 Medicamentos, entrega a domicilio y atención de emergencias

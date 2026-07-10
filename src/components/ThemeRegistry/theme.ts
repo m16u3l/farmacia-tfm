@@ -1,5 +1,6 @@
 import { createTheme } from "@mui/material/styles";
 import type {} from "@mui/x-data-grid/themeAugmentation";
+import { fluidFontSize } from "@/utils/fluidType";
 
 // Paleta profesional para farmacia: verde-azulado (salud, confianza) como
 // color principal y un acento cálido para llamadas a la acción / urgencias.
@@ -40,48 +41,30 @@ const theme = createTheme({
   typography: {
     fontFamily: "var(--font-geist-sans)",
     h1: {
-      fontSize: "2.75rem",
+      fontSize: fluidFontSize(2.1, 2.75),
       fontWeight: 700,
       letterSpacing: "-0.02em",
-      "@media (max-width:600px)": {
-        fontSize: "2.1rem",
-      },
     },
     h2: {
-      fontSize: "2.1rem",
+      fontSize: fluidFontSize(1.75, 2.1),
       fontWeight: 700,
       letterSpacing: "-0.01em",
-      "@media (max-width:600px)": {
-        fontSize: "1.75rem",
-      },
     },
     h3: {
-      fontSize: "1.75rem",
+      fontSize: fluidFontSize(1.5, 1.75),
       fontWeight: 700,
-      "@media (max-width:600px)": {
-        fontSize: "1.5rem",
-      },
     },
     h4: {
-      fontSize: "1.5rem",
+      fontSize: fluidFontSize(1.3, 1.5),
       fontWeight: 700,
-      "@media (max-width:600px)": {
-        fontSize: "1.3rem",
-      },
     },
     h5: {
-      fontSize: "1.25rem",
+      fontSize: fluidFontSize(1.125, 1.25),
       fontWeight: 600,
-      "@media (max-width:600px)": {
-        fontSize: "1.125rem",
-      },
     },
     h6: {
-      fontSize: "1.125rem",
+      fontSize: fluidFontSize(1, 1.125),
       fontWeight: 600,
-      "@media (max-width:600px)": {
-        fontSize: "1rem",
-      },
     },
     subtitle1: {
       color: "#5B6E69",

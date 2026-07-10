@@ -20,6 +20,7 @@ import { Product, ProductFormData } from "@/types/products";
 import { ProductForm } from "@/components/products/ProductForm";
 import { useProducts } from "@/hooks/useProducts";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { fluidFontSize } from "@/utils/fluidType";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -223,7 +224,7 @@ export default function ProductsPage() {
                 setOpenDialog(true);
               }}
               sx={{
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                fontSize: fluidFontSize(0.75, 0.875),
                 width: { xs: "100%", sm: "auto" },
               }}
             >
@@ -246,7 +247,7 @@ export default function ProductsPage() {
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                fontSize: fluidFontSize(0.75, 0.875),
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,

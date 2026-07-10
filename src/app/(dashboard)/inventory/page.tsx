@@ -21,6 +21,7 @@ import { Inventory, InventoryFormData, Product } from "@/types";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { useInventory } from "@/hooks/useInventory";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { fluidFontSize } from "@/utils/fluidType";
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
@@ -256,7 +257,7 @@ export default function InventoryPage() {
             <Typography 
               variant="body2" 
               sx={{ 
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                fontSize: fluidFontSize(0.75, 0.875),
                 color: expired ? 'error.main' : 'inherit',
                 fontWeight: expired ? 'bold' : 'normal'
               }}
@@ -269,7 +270,7 @@ export default function InventoryPage() {
                 label="VENCIDO"
                 color="error"
                 size="small"
-                sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 'bold' }}
+                sx={{ fontSize: fluidFontSize(0.6, 0.75), fontWeight: 'bold' }}
               />
             )}
             {aboutToExpire && (
@@ -278,7 +279,7 @@ export default function InventoryPage() {
                 label="Próximo"
                 color="warning"
                 size="small"
-                sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
+                sx={{ fontSize: fluidFontSize(0.6, 0.75) }}
               />
             )}
             {params.row.expiry_is_approximate && (
@@ -286,7 +287,7 @@ export default function InventoryPage() {
                 label="Fecha aprox."
                 variant="outlined"
                 size="small"
-                sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
+                sx={{ fontSize: fluidFontSize(0.6, 0.75) }}
               />
             )}
           </Box>
@@ -300,7 +301,7 @@ export default function InventoryPage() {
       minWidth: 100,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-          <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+          <Typography variant="body2" sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
             {params.value}
           </Typography>
           {isLowStock(params.value) && (
@@ -309,7 +310,7 @@ export default function InventoryPage() {
               label="Bajo"
               color="warning"
               size="small"
-              sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}
+              sx={{ fontSize: fluidFontSize(0.6, 0.75) }}
             />
           )}
         </Box>
@@ -374,7 +375,7 @@ export default function InventoryPage() {
               startIcon={<AddIcon />}
               onClick={handleAdd}
               sx={{
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                fontSize: fluidFontSize(0.75, 0.875),
                 width: { xs: "100%", sm: "auto" },
                 maxWidth: { xs: "100%", sm: "auto" },
               }}
@@ -392,7 +393,7 @@ export default function InventoryPage() {
                 severity="error" 
                 icon={<WarningIcon />}
                 sx={{ 
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  fontSize: fluidFontSize(0.75, 0.875),
                   "& .MuiAlert-message": { width: "100%" },
                   bgcolor: 'error.light',
                   color: 'error.contrastText'
@@ -412,7 +413,7 @@ export default function InventoryPage() {
                           bgcolor: 'error.dark',
                           color: 'white',
                           fontWeight: 'bold',
-                          '& .MuiChip-label': { fontSize: { xs: '0.6rem', sm: '0.75rem' } }
+                          '& .MuiChip-label': { fontSize: fluidFontSize(0.6, 0.75) }
                         }}
                       />
                     ))}
@@ -424,7 +425,7 @@ export default function InventoryPage() {
                           bgcolor: 'error.dark',
                           color: 'white',
                           fontWeight: 'bold',
-                          '& .MuiChip-label': { fontSize: { xs: '0.6rem', sm: '0.75rem' } }
+                          '& .MuiChip-label': { fontSize: fluidFontSize(0.6, 0.75) }
                         }}
                       />
                     )}
@@ -438,7 +439,7 @@ export default function InventoryPage() {
                 severity="warning" 
                 icon={<WarningIcon />}
                 sx={{ 
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  fontSize: fluidFontSize(0.75, 0.875),
                   "& .MuiAlert-message": { width: "100%" }
                 }}
               >
@@ -474,7 +475,7 @@ export default function InventoryPage() {
                 severity="warning" 
                 icon={<EventBusyIcon />}
                 sx={{ 
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  fontSize: fluidFontSize(0.75, 0.875),
                   "& .MuiAlert-message": { width: "100%" }
                 }}
               >
@@ -522,7 +523,7 @@ export default function InventoryPage() {
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                fontSize: fluidFontSize(0.75, 0.875),
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,

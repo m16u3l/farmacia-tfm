@@ -29,6 +29,7 @@ import LocalPharmacyIcon from "@mui/icons-material/LocalPharmacy";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { roleCanAccess, ROLE_LABELS, UserRole } from "@/lib/permissions";
+import { fluidFontSize } from "@/utils/fluidType";
 
 const DrawerHeader = styled("div")(({ theme }) => ({
   display: "flex",
@@ -176,7 +177,7 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
                       primary={item.text}
                       sx={{
                         "& .MuiListItemText-primary": {
-                          fontSize: { xs: "0.875rem", sm: "0.9rem" },
+                          fontSize: fluidFontSize(0.875, 0.9),
                           fontWeight: active ? 700 : 500,
                         },
                       }}

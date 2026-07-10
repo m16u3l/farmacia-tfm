@@ -10,6 +10,7 @@ import {
   Box,
   Typography,
   Autocomplete,
+  Grid,
 } from "@mui/material";
 import { SellFormData, SellItem, PaymentMethod, Inventory, Employee } from "@/types";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -51,12 +52,12 @@ export function SellForm({
         const inventoryResponse = await fetch('/api/inventory');
         const inventoryData = await inventoryResponse.json();
         setInventory(inventoryData.filter((item: Inventory) => item.quantity_available > 0));
-        
+
         // Fetch employees
         const employeesResponse = await fetch('/api/employees');
         const employeesData = await employeesResponse.json();
         setEmployees(employeesData);
-        
+
         // Set default employee (first one) if not editing
         if (!isEditing && employeesData.length > 0) {
           const firstEmployee = employeesData[0];
@@ -92,7 +93,7 @@ export function SellForm({
         alert(`Stock insuficiente. Disponible: ${selectedInventory.quantity_available}`);
         return;
       }
-      
+
       const subtotal = newItem.quantity * newItem.unit_price;
       const item: SellItem = {
         sell_item_id: 0,
@@ -129,54 +130,57 @@ export function SellForm({
           {isEditing ? "Editar Venta" : "Nueva Venta"}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <TextField
-              margin="dense"
-              label="Nombre del Cliente"
-              type="text"
-              value={formData.customer_name ?? ""}
-              onChange={(e) =>
-                onChange("customer_name", e.target.value)
-              }
-              fullWidth
-              placeholder="Ingrese el nombre del cliente"
-            />
-            <Autocomplete
-              options={employees}
-              getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
-              value={selectedEmployee}
-              onChange={(_, newValue) => {
-                setSelectedEmployee(newValue);
-                onChange('employee_id', newValue?.employee_id || null);
-              }}
-              fullWidth
-              renderInput={(params) => (
-                <TextField 
-                  {...params} 
-                  margin="dense"
-                  label="Empleado" 
-                  fullWidth
-                />
-              )}
-            />
-            <TextField
-              select
-              margin="dense"
-              label="Método de Pago"
-              value={formData.payment_method}
-              onChange={(e) =>
-                onChange("payment_method", e.target.value as PaymentMethod)
-              }
-              fullWidth
-              required
-            >
-              {PAYMENT_METHODS.map((method) => (
-                <MenuItem key={method} value={method}>
-                  {method}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
+          <Grid container spacing={2} sx={{ mt: 0.5, mb: 2 }}>
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                label="Nombre del Cliente"
+                type="text"
+                value={formData.customer_name ?? ""}
+                onChange={(e) =>
+                  onChange("customer_name", e.target.value)
+                }
+                fullWidth
+                placeholder="Ingrese el nombre del cliente"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <Autocomplete
+                options={employees}
+                getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
+                value={selectedEmployee}
+                onChange={(_, newValue) => {
+                  setSelectedEmployee(newValue);
+                  onChange('employee_id', newValue?.employee_id || null);
+                }}
+                fullWidth
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Empleado"
+                    fullWidth
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={12} md={4}>
+              <TextField
+                select
+                label="Método de Pago"
+                value={formData.payment_method}
+                onChange={(e) =>
+                  onChange("payment_method", e.target.value as PaymentMethod)
+                }
+                fullWidth
+                required
+              >
+                {PAYMENT_METHODS.map((method) => (
+                  <MenuItem key={method} value={method}>
+                    {method}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          </Grid>
 
           <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
             Items de la Venta
@@ -187,6 +191,7 @@ export function SellForm({
               key={index}
               sx={{
                 display: "flex",
+                flexWrap: "wrap",
                 gap: 1,
                 alignItems: "center",
                 mb: 1,
@@ -197,7 +202,7 @@ export function SellForm({
                 value={item.inventory?.product_name || `ID: ${item.inventory_id}`}
                 disabled
                 size="small"
-                sx={{ minWidth: 150 }}
+                sx={{ flex: "2 1 160px" }}
               />
               <TextField
                 label="Cantidad"
@@ -205,6 +210,7 @@ export function SellForm({
                 value={item.quantity}
                 disabled
                 size="small"
+                sx={{ flex: "1 1 100px" }}
               />
               <TextField
                 label="Precio Unitario"
@@ -212,6 +218,7 @@ export function SellForm({
                 value={item.unit_price}
                 disabled
                 size="small"
+                sx={{ flex: "1 1 100px" }}
               />
               <TextField
                 label="Subtotal"
@@ -219,6 +226,7 @@ export function SellForm({
                 value={item.subtotal}
                 disabled
                 size="small"
+                sx={{ flex: "1 1 100px" }}
               />
               <IconButton
                 color="error"
@@ -230,7 +238,7 @@ export function SellForm({
             </Box>
           ))}
 
-          <Box sx={{ display: "flex", gap: 1, alignItems: "center", mt: 2 }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", mt: 2 }}>
             <Autocomplete
               options={inventory}
               getOptionLabel={(option) => `${option.product_name || 'Producto'} - Stock: ${option.quantity_available}`}
@@ -246,8 +254,9 @@ export function SellForm({
                 }
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Producto" size="small" sx={{ minWidth: 200 }} />
+                <TextField {...params} label="Producto" size="small" />
               )}
+              sx={{ flex: "2 1 200px" }}
             />
             <TextField
               label="Cantidad"
@@ -259,6 +268,7 @@ export function SellForm({
                 setNewItem({ ...newItem, quantity, subtotal });
               }}
               size="small"
+              sx={{ flex: "1 1 100px" }}
             />
             <TextField
               label="Precio Unitario"
@@ -270,6 +280,7 @@ export function SellForm({
                 setNewItem({ ...newItem, unit_price, subtotal });
               }}
               size="small"
+              sx={{ flex: "1 1 100px" }}
               inputProps={{ step: "0.01", min: "0" }}
             />
             <TextField
@@ -278,10 +289,11 @@ export function SellForm({
               value={newItem.subtotal}
               disabled
               size="small"
+              sx={{ flex: "1 1 100px" }}
             />
-            <IconButton 
-              color="primary" 
-              onClick={addItem} 
+            <IconButton
+              color="primary"
+              onClick={addItem}
               size="small"
               disabled={!selectedInventory || !newItem.quantity || newItem.quantity <= 0}
             >
@@ -290,7 +302,6 @@ export function SellForm({
           </Box>
 
           <TextField
-            margin="dense"
             label="Total"
             type="number"
             value={formData.items?.reduce((sum, item) => sum + item.subtotal, 0) ?? 0}

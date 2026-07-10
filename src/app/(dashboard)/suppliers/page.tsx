@@ -18,6 +18,7 @@ import { Supplier, SupplierFormData } from "@/types";
 import { SupplierForm } from "@/components/suppliers/SupplierForm";
 import { useSuppliers } from "@/hooks/useSuppliers";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { fluidFontSize } from "@/utils/fluidType";
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -191,7 +192,7 @@ export default function SuppliersPage() {
                 setOpenDialog(true);
               }}
               sx={{
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                fontSize: fluidFontSize(0.75, 0.875),
                 width: { xs: "100%", sm: "auto" },
               }}
             >
@@ -214,7 +215,7 @@ export default function SuppliersPage() {
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                fontSize: fluidFontSize(0.75, 0.875),
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,

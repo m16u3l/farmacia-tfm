@@ -8,6 +8,7 @@ import {
   MenuItem,
   FormControlLabel,
   Switch,
+  Grid,
 } from "@mui/material";
 import {
   ProductFormData,
@@ -47,105 +48,117 @@ export function ProductForm({
           {isEditing ? "Editar Producto" : "Nuevo Producto"}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Nombre"
-            fullWidth
-            value={formData.name ?? ""}
-            onChange={(e) => onChange("name", e.target.value)}
-            required
-          />
-          <TextField
-            margin="dense"
-            label="Descripción"
-            fullWidth
-            multiline
-            rows={3}
-            value={formData.description ?? ""}
-            onChange={(e) => onChange("description", e.target.value)}
-          />
-          <TextField
-            select
-            margin="dense"
-            label="Categoría"
-            fullWidth
-            value={formData.category ?? ""}
-            onChange={(e) => onChange("category", e.target.value)}
-          >
-            {PRODUCT_CATEGORIES.map((category) => (
-              <MenuItem key={category} value={category}>
-                {category}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            margin="dense"
-            label="Tipo"
-            fullWidth
-            value={formData.type ?? ""}
-            onChange={(e) => onChange("type", e.target.value)}
-          >
-            {PRODUCT_TYPES.map((type) => (
-              <MenuItem key={type} value={type}>
-                {type}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            margin="dense"
-            label="Forma farmacéutica"
-            fullWidth
-            value={formData.dosage_form ?? ""}
-            onChange={(e) => onChange("dosage_form", e.target.value)}
-          >
-            {DOSAGE_FORMS.map((form) => (
-              <MenuItem key={form} value={form}>
-                {form}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            margin="dense"
-            label="Unidad"
-            fullWidth
-            value={formData.unit ?? ""}
-            onChange={(e) => onChange("unit", e.target.value)}
-          >
-            {PRODUCT_UNITS.map((unit) => (
-              <MenuItem key={unit} value={unit}>
-                {unit}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            margin="dense"
-            label="Código de barras"
-            fullWidth
-            value={formData.barcode ?? ""}
-            onChange={(e) => onChange("barcode", e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            label="Instrucciones de dosificación"
-            fullWidth
-            placeholder="Ej. cada 12 horas, adultos"
-            helperText="Opcional. Indicación de uso o posología del producto."
-            value={formData.dosage_instructions ?? ""}
-            onChange={(e) => onChange("dosage_instructions", e.target.value)}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={formData.status}
-                onChange={(e) => onChange("status", e.target.checked)}
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12}>
+              <TextField
+                autoFocus
+                label="Nombre"
+                fullWidth
+                value={formData.name ?? ""}
+                onChange={(e) => onChange("name", e.target.value)}
+                required
               />
-            }
-            label="Activo"
-          />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Descripción"
+                fullWidth
+                multiline
+                rows={3}
+                value={formData.description ?? ""}
+                onChange={(e) => onChange("description", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Categoría"
+                fullWidth
+                value={formData.category ?? ""}
+                onChange={(e) => onChange("category", e.target.value)}
+              >
+                {PRODUCT_CATEGORIES.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Tipo"
+                fullWidth
+                value={formData.type ?? ""}
+                onChange={(e) => onChange("type", e.target.value)}
+              >
+                {PRODUCT_TYPES.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Forma farmacéutica"
+                fullWidth
+                value={formData.dosage_form ?? ""}
+                onChange={(e) => onChange("dosage_form", e.target.value)}
+              >
+                {DOSAGE_FORMS.map((form) => (
+                  <MenuItem key={form} value={form}>
+                    {form}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Unidad"
+                fullWidth
+                value={formData.unit ?? ""}
+                onChange={(e) => onChange("unit", e.target.value)}
+              >
+                {PRODUCT_UNITS.map((unit) => (
+                  <MenuItem key={unit} value={unit}>
+                    {unit}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Código de barras"
+                fullWidth
+                value={formData.barcode ?? ""}
+                onChange={(e) => onChange("barcode", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Instrucciones de dosificación"
+                fullWidth
+                placeholder="Ej. cada 12 horas, adultos"
+                helperText="Opcional. Indicación de uso o posología del producto."
+                value={formData.dosage_instructions ?? ""}
+                onChange={(e) => onChange("dosage_instructions", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.status}
+                    onChange={(e) => onChange("status", e.target.checked)}
+                  />
+                }
+                label="Activo"
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>

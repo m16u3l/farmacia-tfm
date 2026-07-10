@@ -18,6 +18,7 @@ import LocalMallIcon from "@mui/icons-material/LocalMallOutlined";
 import { Order, OrderFormData, Supplier } from "@/types";
 import { OrderForm } from "@/components/orders/OrderForm";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { fluidFontSize } from "@/utils/fluidType";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -268,7 +269,7 @@ export default function OrdersPage() {
       flex: 1.5,
       minWidth: 120,
       renderCell: (params: GridRenderCellParams) => (
-        <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+        <Typography variant="body2" sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
           {new Date(params.value).toLocaleDateString()}
         </Typography>
       ),
@@ -283,7 +284,7 @@ export default function OrdersPage() {
           label={String(params.value ?? "").toUpperCase()}
           color={getStatusColor(String(params.value ?? ""))}
           size="small"
-          sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 'bold' }}
+          sx={{ fontSize: fluidFontSize(0.6, 0.75), fontWeight: 'bold' }}
         />
       ),
     },
@@ -296,7 +297,7 @@ export default function OrdersPage() {
         <Typography 
           variant="body2" 
           sx={{ 
-            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            fontSize: fluidFontSize(0.75, 0.875),
             fontWeight: 'bold',
             color: 'primary.main'
           }}
@@ -344,7 +345,7 @@ export default function OrdersPage() {
               startIcon={<AddIcon />}
               onClick={handleAdd}
               sx={{
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                fontSize: fluidFontSize(0.75, 0.875),
                 width: { xs: "100%", sm: "auto" },
                 maxWidth: { xs: "100%", sm: "auto" },
               }}
@@ -369,7 +370,7 @@ export default function OrdersPage() {
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                fontSize: fluidFontSize(0.75, 0.875),
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,

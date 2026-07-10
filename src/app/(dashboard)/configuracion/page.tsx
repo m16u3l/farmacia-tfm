@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { fluidFontSize } from "@/utils/fluidType";
 
 export default function ConfiguracionPage() {
   const [diasCobranza, setDiasCobranza] = useState("");
@@ -113,7 +114,7 @@ export default function ConfiguracionPage() {
             disabled={saving}
             sx={{ 
               mt: 2,
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              fontSize: fluidFontSize(0.75, 0.875),
               width: { xs: '100%', sm: 'auto' }
             }}
           >

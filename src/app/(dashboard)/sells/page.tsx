@@ -18,6 +18,7 @@ import { Sell, SellFormData } from "@/types";
 import { SellForm } from "@/components/sells/SellForm";
 import { useSells } from "@/hooks/useSells";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { fluidFontSize } from "@/utils/fluidType";
 
 export default function SellsPage() {
   const [sells, setSells] = useState<Sell[]>([]);
@@ -142,7 +143,7 @@ export default function SellsPage() {
       flex: 1.5, 
       minWidth: 120,
       renderCell: (params) => (
-        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+        <Typography sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
           {params.row.employee_name || `ID: ${params.row.employee_id}`}
         </Typography>
       ),
@@ -153,7 +154,7 @@ export default function SellsPage() {
       flex: 1.2,
       minWidth: 100,
       renderCell: (params) => (
-        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+        <Typography sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
           {new Date(params.row.sell_date).toLocaleDateString()}
         </Typography>
       ),
@@ -164,7 +165,7 @@ export default function SellsPage() {
       flex: 1,
       minWidth: 80,
       renderCell: (params) => (
-        <Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 'bold' }}>
+        <Typography sx={{ fontSize: fluidFontSize(0.75, 0.875), fontWeight: 'bold' }}>
           ${params.row.total_amount}
         </Typography>
       ),
@@ -177,7 +178,7 @@ export default function SellsPage() {
       renderCell: (params) => (
         <Typography sx={{ 
           textTransform: "capitalize",
-          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          fontSize: fluidFontSize(0.75, 0.875)
         }}>
           {params.row.payment_method}
         </Typography>
@@ -228,7 +229,7 @@ export default function SellsPage() {
                 setOpenDialog(true);
               }}
               sx={{
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                fontSize: fluidFontSize(0.75, 0.875),
                 width: { xs: "100%", sm: "auto" },
               }}
             >
@@ -251,7 +252,7 @@ export default function SellsPage() {
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
                 color: "white",
-                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                fontSize: fluidFontSize(0.75, 0.875),
               },
               "& .MuiDataGrid-row:nth-of-type(even)": {
                 backgroundColor: (theme) => theme.palette.action.hover,

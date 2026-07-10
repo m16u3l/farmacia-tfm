@@ -5,6 +5,7 @@ import {
   DialogActions,
   TextField,
   Button,
+  Grid,
 } from "@mui/material";
 import { EmployeeFormData } from "@/types";
 
@@ -37,45 +38,52 @@ export function EmployeeForm({
           {isEditing ? "Editar Empleado" : "Nuevo Empleado"}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Nombre"
-            fullWidth
-            value={formData.first_name ?? ""}
-            onChange={(e) => onChange("first_name", e.target.value)}
-            required
-          />
-          <TextField
-            margin="dense"
-            label="Apellido"
-            fullWidth
-            value={formData.last_name ?? ""}
-            onChange={(e) => onChange("last_name", e.target.value)}
-            required
-          />
-          <TextField
-            margin="dense"
-            label="Cargo"
-            fullWidth
-            value={formData.role ?? ""}
-            onChange={(e) => onChange("role", e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            label="Email"
-            type="email"
-            fullWidth
-            value={formData.email ?? ""}
-            onChange={(e) => onChange("email", e.target.value)}
-          />
-          <TextField
-            margin="dense"
-            label="Teléfono"
-            fullWidth
-            value={formData.phone ?? ""}
-            onChange={(e) => onChange("phone", e.target.value)}
-          />
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                autoFocus
+                label="Nombre"
+                fullWidth
+                value={formData.first_name ?? ""}
+                onChange={(e) => onChange("first_name", e.target.value)}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Apellido"
+                fullWidth
+                value={formData.last_name ?? ""}
+                onChange={(e) => onChange("last_name", e.target.value)}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Cargo"
+                fullWidth
+                value={formData.role ?? ""}
+                onChange={(e) => onChange("role", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Email"
+                type="email"
+                fullWidth
+                value={formData.email ?? ""}
+                onChange={(e) => onChange("email", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Teléfono"
+                fullWidth
+                value={formData.phone ?? ""}
+                onChange={(e) => onChange("phone", e.target.value)}
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>

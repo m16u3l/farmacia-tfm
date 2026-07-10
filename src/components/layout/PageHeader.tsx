@@ -2,6 +2,7 @@
 
 import { Box, Typography } from "@mui/material";
 import { ReactNode } from "react";
+import { fluidFontSize } from "@/utils/fluidType";
 
 interface PageHeaderProps {
   title: string;
@@ -40,7 +41,7 @@ export function PageHeader({ title, subtitle, icon, action }: PageHeaderProps) {
           </Box>
         )}
         <Box>
-          <Typography variant="h4" sx={{ fontSize: { xs: "1.35rem", sm: "1.6rem" } }}>
+          <Typography variant="h4" sx={{ fontSize: fluidFontSize(1.35, 1.6) }}>
             {title}
           </Typography>
           {subtitle && (
