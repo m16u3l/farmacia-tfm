@@ -14,7 +14,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSaleOutlined";
-import { Sell, SellFormData } from "@/types";
+import { Sell, SellFormData, PAYMENT_METHOD_LABELS, PaymentMethod } from "@/types";
 import { SellForm } from "@/components/sells/SellForm";
 import { useSells } from "@/hooks/useSells";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -27,8 +27,6 @@ export default function SellsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<SellFormData>({
-    customer_name: null,
-    employee_id: null,
     payment_method: "efectivo",
     items: [],
   });
@@ -58,8 +56,6 @@ export default function SellsPage() {
 
   const handleEdit = (sell: Sell) => {
     setFormData({
-      customer_name: sell.customer_name ?? null,
-      employee_id: sell.employee_id ?? null,
       payment_method: sell.payment_method,
       items: sell.items || [],
     });
@@ -124,8 +120,6 @@ export default function SellsPage() {
 
   const resetForm = () => {
     setFormData({
-      customer_name: null,
-      employee_id: null,
       payment_method: "efectivo",
       items: [],
     });
@@ -136,15 +130,14 @@ export default function SellsPage() {
 
   const columns: GridColDef[] = [
     { field: "sell_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
-    { field: "customer_name", headerName: "Cliente", flex: 1.5, minWidth: 120 },
-    { 
-      field: "employee_name", 
-      headerName: "Empleado", 
-      flex: 1.5, 
+    {
+      field: "user_name",
+      headerName: "Vendido por",
+      flex: 1.2,
       minWidth: 120,
       renderCell: (params) => (
         <Typography sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
-          {params.row.employee_name || `ID: ${params.row.employee_id}`}
+          {params.row.user_name || "—"}
         </Typography>
       ),
     },
@@ -176,11 +169,8 @@ export default function SellsPage() {
       flex: 1,
       minWidth: 80,
       renderCell: (params) => (
-        <Typography sx={{ 
-          textTransform: "capitalize",
-          fontSize: fluidFontSize(0.75, 0.875)
-        }}>
-          {params.row.payment_method}
+        <Typography sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
+          {PAYMENT_METHOD_LABELS[params.row.payment_method as PaymentMethod]}
         </Typography>
       ),
     },

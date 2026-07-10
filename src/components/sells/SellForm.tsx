@@ -12,7 +12,7 @@ import {
   Autocomplete,
   Grid,
 } from "@mui/material";
-import { SellFormData, SellItem, PaymentMethod, Inventory, Employee } from "@/types";
+import { SellFormData, SellItem, PaymentMethod, PAYMENT_METHOD_LABELS, Inventory } from "@/types";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import { useState, useEffect } from "react";
@@ -35,9 +35,7 @@ export function SellForm({
   onChange,
 }: SellFormProps) {
   const [inventory, setInventory] = useState<Inventory[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedInventory, setSelectedInventory] = useState<Inventory | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [newItem, setNewItem] = useState<Partial<SellItem>>({
     inventory_id: 0,
     quantity: 1,
@@ -46,40 +44,19 @@ export function SellForm({
   });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInventory = async () => {
       try {
-        // Fetch inventory
         const inventoryResponse = await fetch('/api/inventory');
         const inventoryData = await inventoryResponse.json();
         setInventory(inventoryData.filter((item: Inventory) => item.quantity_available > 0));
-
-        // Fetch employees
-        const employeesResponse = await fetch('/api/employees');
-        const employeesData = await employeesResponse.json();
-        setEmployees(employeesData);
-
-        // Set default employee (first one) if not editing
-        if (!isEditing && employeesData.length > 0) {
-          const firstEmployee = employeesData[0];
-          setSelectedEmployee(firstEmployee);
-          onChange('employee_id', firstEmployee.employee_id);
-        }
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
     if (open) {
-      fetchData();
+      fetchInventory();
     }
-  }, [open, isEditing, onChange]);
-
-  // Set selected employee when editing
-  useEffect(() => {
-    if (isEditing && formData.employee_id && employees.length > 0) {
-      const employee = employees.find(emp => emp.employee_id === formData.employee_id);
-      setSelectedEmployee(employee || null);
-    }
-  }, [isEditing, formData.employee_id, employees]);
+  }, [open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,12 +93,7 @@ export function SellForm({
     onChange("items", items);
   };
 
-  const PAYMENT_METHODS: PaymentMethod[] = [
-    "efectivo",
-    "tarjeta",
-    "seguro",
-    "transferencia",
-  ];
+  const PAYMENT_METHODS: PaymentMethod[] = ["efectivo", "qr_transferencia"];
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -132,37 +104,6 @@ export function SellForm({
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5, mb: 2 }}>
             <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                label="Nombre del Cliente"
-                type="text"
-                value={formData.customer_name ?? ""}
-                onChange={(e) =>
-                  onChange("customer_name", e.target.value)
-                }
-                fullWidth
-                placeholder="Ingrese el nombre del cliente"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-              <Autocomplete
-                options={employees}
-                getOptionLabel={(option) => `${option.first_name} ${option.last_name}`}
-                value={selectedEmployee}
-                onChange={(_, newValue) => {
-                  setSelectedEmployee(newValue);
-                  onChange('employee_id', newValue?.employee_id || null);
-                }}
-                fullWidth
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Empleado"
-                    fullWidth
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={12} md={4}>
               <TextField
                 select
                 label="Método de Pago"
@@ -175,7 +116,7 @@ export function SellForm({
               >
                 {PAYMENT_METHODS.map((method) => (
                   <MenuItem key={method} value={method}>
-                    {method}
+                    {PAYMENT_METHOD_LABELS[method]}
                   </MenuItem>
                 ))}
               </TextField>

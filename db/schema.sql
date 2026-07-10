@@ -147,14 +147,12 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sells (
   sell_id         SERIAL PRIMARY KEY,
-  customer_name   VARCHAR(150),
-  employee_id     INTEGER REFERENCES employees(employee_id) ON DELETE SET NULL,
-  -- Usuario del sistema que registró la venta (para auditoría / trazabilidad)
+  -- Usuario del sistema que registró la venta (quien vendió, y auditoría / trazabilidad)
   user_id         INTEGER REFERENCES users(id) ON DELETE SET NULL,
   sell_date       TIMESTAMP NOT NULL DEFAULT NOW(),
   total_amount    NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
   payment_method  VARCHAR(20) NOT NULL DEFAULT 'efectivo'
-                  CHECK (payment_method IN ('efectivo', 'tarjeta', 'seguro', 'transferencia'))
+                  CHECK (payment_method IN ('efectivo', 'qr_transferencia'))
 );
 
 CREATE TABLE IF NOT EXISTS sell_items (

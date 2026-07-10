@@ -1,17 +1,19 @@
-import { Employee } from './employee';
 import { Inventory } from './inventory';
 
-export type PaymentMethod = 'efectivo' | 'tarjeta' | 'seguro' | 'transferencia';
+export type PaymentMethod = 'efectivo' | 'qr_transferencia';
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  efectivo: 'Efectivo',
+  qr_transferencia: 'QR/Transferencia',
+};
 
 export interface Sell {
   sell_id: number;
-  customer_name?: string | null;
-  employee_id?: number | null;
-  employee_name?: string;  // For joined queries
+  user_id?: number | null;
+  user_name?: string;  // For joined queries
   sell_date: string;
   total_amount: number;
   payment_method: PaymentMethod;
-  employee?: Employee;  // For joined queries
   items?: SellItem[];  // For joined queries
 }
 
@@ -26,8 +28,6 @@ export interface SellItem {
 }
 
 export interface SellFormData {
-  customer_name?: string | null;
-  employee_id?: number | null;
   payment_method: PaymentMethod;
   items?: SellItem[];
 }

@@ -3,10 +3,10 @@ import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 
-export async function GET(request: Request, context: unknown) {
-  const { params } = context as { params: { id: string } };
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   try {
-    const sellsResult = await pool.query(`SELECT * FROM sells WHERE id = $1`, [
+    const sellsResult = await pool.query(`SELECT * FROM sells WHERE sell_id = $1`, [
       params.id,
     ]);
 
@@ -30,11 +30,11 @@ export async function GET(request: Request, context: unknown) {
   }
 }
 
-export async function PUT(request: Request, context: unknown) {
-  const { params } = context as { params: { id: string } };
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   try {
     const data = await request.json();
-    const { customer_id, employee_id, payment_method, items } = data;
+    const { payment_method, items } = data;
 
     const client = await pool.connect();
     try {
@@ -43,11 +43,9 @@ export async function PUT(request: Request, context: unknown) {
       // Actualizar la venta
       await client.query(
         `UPDATE sells
-         SET customer_id = $1,
-             employee_id = $2,
-             payment_method = $3
-         WHERE id = $4`,
-        [customer_id, employee_id, payment_method, params.id]
+         SET payment_method = $1
+         WHERE sell_id = $2`,
+        [payment_method, params.id]
       );
 
       // Eliminar items antiguos
@@ -64,7 +62,7 @@ export async function PUT(request: Request, context: unknown) {
 
       // Actualizar el total
       const total = items.reduce((sum: number, item: { subtotal: number }) => sum + item.subtotal, 0);
-      await client.query(`UPDATE sells SET total_amount = $1 WHERE id = $2`, [total, params.id]);
+      await client.query(`UPDATE sells SET total_amount = $1 WHERE sell_id = $2`, [total, params.id]);
 
       // Confirmar la transacción
       await client.query("COMMIT");
@@ -89,8 +87,8 @@ export async function PUT(request: Request, context: unknown) {
   }
 }
 
-export async function DELETE(request: Request, context: unknown) {
-  const { params } = context as { params: { id: string } };
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  const params = await context.params;
   try {
     const client = await pool.connect();
     try {
@@ -100,7 +98,7 @@ export async function DELETE(request: Request, context: unknown) {
       await client.query(`DELETE FROM sell_items WHERE sell_id = $1`, [params.id]);
 
       // Eliminar la venta
-      await client.query(`DELETE FROM sells WHERE id = $1`, [params.id]);
+      await client.query(`DELETE FROM sells WHERE sell_id = $1`, [params.id]);
 
       // Confirmar la transacción
       await client.query("COMMIT");
