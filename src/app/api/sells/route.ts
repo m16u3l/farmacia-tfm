@@ -13,11 +13,15 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const session = await getSessionFromRequest(request);
+    // admin ve todas las ventas; los demás roles solo ven las que ellos registraron
+    const isAdmin = session?.role === "admin";
     const client = await pool.connect();
     try {
-      const result = await client.query(`
+      const result = await client.query(
+        `
         SELECT
           s.*,
           u.first_name || ' ' || u.last_name as user_name,
@@ -40,9 +44,12 @@ export async function GET() {
         LEFT JOIN sell_items si ON s.sell_id = si.sell_id
         LEFT JOIN inventory i ON si.inventory_id = i.inventory_id
         LEFT JOIN products p ON i.product_id = p.product_id
+        ${isAdmin ? "" : "WHERE s.user_id = $1"}
         GROUP BY s.sell_id, u.first_name, u.last_name
         ORDER BY s.sell_date DESC
-      `);
+      `,
+        isAdmin ? [] : [session?.userId ?? null]
+      );
       if (!result.rows) {
         return NextResponse.json([], { headers: corsHeaders });
       }

@@ -6,3 +6,4 @@ export * from './order';
 export * from './sell';
 export * from './area';
 export * from './validation';
+export * from './cashRegisterClosure';

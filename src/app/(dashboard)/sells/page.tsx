@@ -8,15 +8,21 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  Tooltip,
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import LockIcon from "@mui/icons-material/LockOutlined";
+import SavingsIcon from "@mui/icons-material/SavingsOutlined";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSaleOutlined";
 import { Sell, SellFormData, PAYMENT_METHOD_LABELS, PaymentMethod } from "@/types";
 import { SellForm } from "@/components/sells/SellForm";
+import { CloseCashRegisterDialog } from "@/components/sells/CloseCashRegisterDialog";
 import { useSells } from "@/hooks/useSells";
+import { useCashRegisterClosures } from "@/hooks/useCashRegisterClosures";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fluidFontSize } from "@/utils/fluidType";
 
@@ -26,6 +32,7 @@ export default function SellsPage() {
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [openCloseCajaDialog, setOpenCloseCajaDialog] = useState(false);
   const [formData, setFormData] = useState<SellFormData>({
     payment_method: "efectivo",
     items: [],
@@ -37,6 +44,9 @@ export default function SellsPage() {
   });
 
   const { createSell, updateSell, deleteSell } = useSells();
+  const { getPendingSummary, createClosure } = useCashRegisterClosures();
+  const { user } = useCurrentUser();
+  const isAdmin = user?.role === "admin";
 
   const fetchSells = async () => {
     try {
@@ -179,27 +189,37 @@ export default function SellsPage() {
       headerName: "Acciones",
       flex: 0.7,
       minWidth: 120,
-      renderCell: (params: GridRenderCellParams) => (
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <IconButton
-            color="primary"
-            size="small"
-            onClick={() => {
-              setSelectedSell(params.row);
-              handleEdit(params.row);
-            }}
-          >
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            color="error"
-            size="small"
-            onClick={() => handleDelete(params.row.sell_id)}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Box>
-      ),
+      renderCell: (params: GridRenderCellParams) => {
+        const locked = Boolean(params.row.closure_id) && !isAdmin;
+        if (locked) {
+          return (
+            <Tooltip title="Venta incluida en un cierre de caja">
+              <LockIcon fontSize="small" color="disabled" />
+            </Tooltip>
+          );
+        }
+        return (
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <IconButton
+              color="primary"
+              size="small"
+              onClick={() => {
+                setSelectedSell(params.row);
+                handleEdit(params.row);
+              }}
+            >
+              <EditIcon />
+            </IconButton>
+            <IconButton
+              color="error"
+              size="small"
+              onClick={() => handleDelete(params.row.sell_id)}
+            >
+              <DeleteIcon />
+            </IconButton>
+          </Box>
+        );
+      },
     },
   ];
 
@@ -211,20 +231,33 @@ export default function SellsPage() {
           subtitle="Registro de ventas realizadas al público"
           icon={<PointOfSaleIcon />}
           action={
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                resetForm();
-                setOpenDialog(true);
-              }}
-              sx={{
-                fontSize: fluidFontSize(0.75, 0.875),
-                width: { xs: "100%", sm: "auto" },
-              }}
-            >
-              Nueva venta
-            </Button>
+            <Box sx={{ display: "flex", gap: 1, flexDirection: { xs: "column", sm: "row" }, width: { xs: "100%", sm: "auto" } }}>
+              <Button
+                variant="outlined"
+                startIcon={<SavingsIcon />}
+                onClick={() => setOpenCloseCajaDialog(true)}
+                sx={{
+                  fontSize: fluidFontSize(0.75, 0.875),
+                  width: { xs: "100%", sm: "auto" },
+                }}
+              >
+                Cerrar caja
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  resetForm();
+                  setOpenDialog(true);
+                }}
+                sx={{
+                  fontSize: fluidFontSize(0.75, 0.875),
+                  width: { xs: "100%", sm: "auto" },
+                }}
+              >
+                Nueva venta
+              </Button>
+            </Box>
           }
         />
         <Box sx={{ width: "100%", overflowX: "auto" }}>
@@ -268,6 +301,21 @@ export default function SellsPage() {
         onClose={() => setOpenDialog(false)}
         onSubmit={handleSubmit}
         onChange={handleFormChange}
+      />
+
+      <CloseCashRegisterDialog
+        open={openCloseCajaDialog}
+        onClose={() => setOpenCloseCajaDialog(false)}
+        getPendingSummary={getPendingSummary}
+        onConfirm={async (data) => {
+          await createClosure(data);
+          setSnackbar({
+            open: true,
+            message: "Caja cerrada exitosamente",
+            severity: "success",
+          });
+          await fetchSells();
+        }}
       />
 
       <Snackbar

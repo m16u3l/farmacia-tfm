@@ -16,11 +16,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[] | "*"> = {
     "/areas",
     "/inventory-validations",
     "/sells",
+    "/cash-register-closures",
     "/orders",
     "/suppliers",
     "/validations",
   ],
-  cajero: ["/dashboard", "/sells", "/inventory"],
+  cajero: ["/dashboard", "/sells", "/cash-register-closures", "/inventory"],
 };
 
 export function roleCanAccess(role: UserRole, pathname: string): boolean {

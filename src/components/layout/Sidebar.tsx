@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -26,12 +25,14 @@ import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
 import AccountTreeIcon from "@mui/icons-material/AccountTreeOutlined";
 import FactCheckIcon from "@mui/icons-material/FactCheckOutlined";
+import SavingsIcon from "@mui/icons-material/SavingsOutlined";
 import LogoutIcon from "@mui/icons-material/LogoutOutlined";
 import LocalPharmacyIcon from "@mui/icons-material/LocalPharmacy";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { roleCanAccess, ROLE_LABELS, UserRole } from "@/lib/permissions";
+import { roleCanAccess, ROLE_LABELS } from "@/lib/permissions";
 import { fluidFontSize } from "@/utils/fluidType";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const DrawerHeader = styled("div")(({ theme }) => ({
   display: "flex",
@@ -62,6 +63,7 @@ const menuGroups = [
       { text: "Áreas", icon: <AccountTreeIcon />, href: "/areas" },
       { text: "Validación de Inventario", icon: <FactCheckIcon />, href: "/inventory-validations" },
       { text: "Ventas", icon: <ShoppingCartIcon />, href: "/sells" },
+      { text: "Cierres de caja", icon: <SavingsIcon />, href: "/cash-register-closures" },
       { text: "Órdenes de compra", icon: <LocalMallIcon />, href: "/orders" },
       { text: "Proveedores", icon: <LocalShippingIcon />, href: "/suppliers" },
     ],
@@ -77,27 +79,12 @@ const menuGroups = [
   },
 ];
 
-interface CurrentUser {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: UserRole;
-}
-
 export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {}) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<CurrentUser | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then(setUser)
-      .catch(() => setUser(null));
-  }, []);
+  const { user } = useCurrentUser();
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });

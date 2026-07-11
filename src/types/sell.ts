@@ -14,6 +14,7 @@ export interface Sell {
   sell_date: string;
   total_amount: number;
   payment_method: PaymentMethod;
+  closure_id?: number | null;  // Set once the sale is included in a cash register closure (locks it)
   items?: SellItem[];  // For joined queries
 }
 

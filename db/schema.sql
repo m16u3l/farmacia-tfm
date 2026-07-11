@@ -193,9 +193,44 @@ CREATE TABLE IF NOT EXISTS sell_items (
   subtotal      NUMERIC(10, 2) NOT NULL CHECK (subtotal >= 0)
 );
 
+-- -----------------------------------------------------------------------------
+-- 8b. cash_register_closures — cierres de caja
+-- -----------------------------------------------------------------------------
+-- Cada usuario puede cerrar su caja en cualquier momento (más de una vez por
+-- día). Un cierre agrupa todas las ventas propias aún no incluidas en un
+-- cierre anterior (sells.closure_id IS NULL) en un snapshot con totales por
+-- método de pago y el conteo físico de efectivo, para detectar faltantes o
+-- sobrantes (cash_difference = counted_cash - total_efectivo).
+CREATE TABLE IF NOT EXISTS cash_register_closures (
+  closure_id              SERIAL PRIMARY KEY,
+  -- SET NULL (no RESTRICT): borrar un usuario no debe bloquearse por su historial de cierres
+  user_id                 INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  period_start            TIMESTAMP NOT NULL,  -- MIN(sell_date) de las ventas incluidas
+  period_end              TIMESTAMP NOT NULL,  -- MAX(sell_date) de las ventas incluidas
+  status                  VARCHAR(20) NOT NULL DEFAULT 'closed' CHECK (status IN ('closed', 'cancelled')),
+  sell_count               INTEGER NOT NULL DEFAULT 0,
+  total_amount             NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
+  total_efectivo           NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (total_efectivo >= 0),
+  total_qr_transferencia   NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (total_qr_transferencia >= 0),
+  counted_cash             NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (counted_cash >= 0),
+  cash_difference          NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  notes                    TEXT,
+  closed_at                TIMESTAMP NOT NULL DEFAULT NOW(),
+  cancelled_by             INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  cancelled_at             TIMESTAMP
+);
+
+-- Referencia al cierre que incluyó esta venta (NULL = todavía no cerrada).
+-- SET NULL: anular un cierre debe liberar las ventas, no bloquear el borrado del cierre.
+ALTER TABLE sells
+  ADD COLUMN IF NOT EXISTS closure_id INTEGER REFERENCES cash_register_closures(closure_id) ON DELETE SET NULL;
+
 CREATE INDEX IF NOT EXISTS idx_sells_sell_date ON sells(sell_date);
 CREATE INDEX IF NOT EXISTS idx_sell_items_sell_id ON sell_items(sell_id);
 CREATE INDEX IF NOT EXISTS idx_sell_items_inventory_id ON sell_items(inventory_id);
+CREATE INDEX IF NOT EXISTS idx_sells_closure_id ON sells(closure_id);
+CREATE INDEX IF NOT EXISTS idx_cash_register_closures_user_id ON cash_register_closures(user_id);
+CREATE INDEX IF NOT EXISTS idx_cash_register_closures_status ON cash_register_closures(status);
 
 -- -----------------------------------------------------------------------------
 -- 9. configuracion — parámetros generales del sistema (vista /configuracion)
