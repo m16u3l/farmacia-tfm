@@ -1,4 +1,4 @@
-export const AREA_TYPES = ['sucursal', 'almacen', 'estante', 'otro'] as const;
+export const AREA_TYPES = ['sucursal', 'almacen', 'estante', 'apartado', 'otro'] as const;
 export type AreaType = typeof AREA_TYPES[number];
 
 export interface InventoryArea {

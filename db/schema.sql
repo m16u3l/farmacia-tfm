@@ -45,7 +45,12 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS products (
   product_id            SERIAL PRIMARY KEY,
   name                  VARCHAR(150) NOT NULL,
+  -- Descripción corta profesional (qué es el producto / clase terapéutica)
   description           TEXT,
+  -- Usos o indicaciones posibles del producto
+  possible_uses         TEXT,
+  -- Precauciones, contraindicaciones u otra información relevante
+  additional_info       TEXT,
   -- category: analgésicos | antibióticos | antiinflamatorios | antipiréticos |
   --           cardiovasculares | dermatológicos | gastrointestinales |
   --           respiratorios | vitaminas | otros  (nulo = pendiente de clasificar)
@@ -86,7 +91,7 @@ CREATE TABLE IF NOT EXISTS inventory_areas (
   area_id        SERIAL PRIMARY KEY,
   name           VARCHAR(100) NOT NULL,
   type           VARCHAR(20) NOT NULL DEFAULT 'otro'
-                 CHECK (type IN ('sucursal', 'almacen', 'estante', 'otro')),
+                 CHECK (type IN ('sucursal', 'almacen', 'estante', 'otro', 'apartado')),
   -- RESTRICT: no se puede borrar un área mientras tenga sub-áreas (evita huérfanos
   -- silenciosos). Los ciclos (un área como su propio ancestro) se validan en la API,
   -- Postgres no lo puede verificar solo con una FK/CHECK.
@@ -258,12 +263,26 @@ CREATE TABLE IF NOT EXISTS inventory_validations (
   started_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
   started_at     TIMESTAMP NOT NULL DEFAULT NOW(),
   completed_at   TIMESTAMP,
+  -- inventory_adjusted_at IS NULL es la guarda de idempotencia del endpoint
+  -- apply-adjustments: solo se puede aplicar una vez por sesión.
+  inventory_adjusted_at TIMESTAMP,
+  inventory_adjusted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   CONSTRAINT inventory_validations_area_id_consistency
     CHECK ((type = 'area' AND area_id IS NOT NULL) OR (type <> 'area'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_validations_status ON inventory_validations(status);
 CREATE INDEX IF NOT EXISTS idx_inventory_validations_type ON inventory_validations(type);
+
+-- Evita sesiones 'area' concurrentes para la misma área, y sesiones concurrentes
+-- del mismo tipo para los tipos globales (expiring/expired/low_stock).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inventory_validations_in_progress_area
+  ON inventory_validations (type, area_id)
+  WHERE status = 'in_progress' AND type = 'area';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_inventory_validations_in_progress_global
+  ON inventory_validations (type)
+  WHERE status = 'in_progress' AND type <> 'area';
 
 CREATE TABLE IF NOT EXISTS inventory_validation_items (
   validation_item_id  SERIAL PRIMARY KEY,
@@ -275,6 +294,11 @@ CREATE TABLE IF NOT EXISTS inventory_validation_items (
   -- inventory.quantity_available cambia después (venta, transferencia, etc.).
   expected_quantity    INTEGER NOT NULL,
   actual_quantity      INTEGER,
+  -- Fecha de vencimiento real observada en el lote físico durante la
+  -- verificación (opcional). NULL = no se corrigió; el "esperado" se lee en
+  -- vivo de inventory.expiry_date (igual que expiry_date en general no se
+  -- snapshotea, a diferencia de expected_quantity).
+  actual_expiry_date   DATE,
   status               VARCHAR(20) NOT NULL DEFAULT 'pending'
                        CHECK (status IN ('pending', 'confirmed', 'inconsistent', 'not_found')),
   notes                TEXT,

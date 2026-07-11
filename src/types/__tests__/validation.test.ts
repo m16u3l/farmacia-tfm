@@ -57,4 +57,33 @@ describe('Data Validation', () => {
       expect(validateEmployee(invalidEmployee)).toBe(false)
     })
   })
+
+  describe('Inventory validation item status derivation', () => {
+    // Mirrors the status-derivation logic in
+    // src/app/api/inventory-validations/[id]/items/[itemId]/route.ts — pinned
+    // here so a future refactor doesn't silently change the semantics: a count
+    // matching what was expected (including 0 === 0, e.g. a lot that was
+    // already out of stock and stays that way) is "confirmed" first; only then
+    // does actual_quantity === 0 mean "not found" (expected stock, found
+    // none); anything else is "inconsistent".
+    const deriveStatus = (actualQuantity: number, expectedQuantity: number) => {
+      if (actualQuantity === expectedQuantity) return 'confirmed'
+      if (actualQuantity === 0) return 'not_found'
+      return 'inconsistent'
+    }
+
+    it('marks a matching count as confirmed, even when both are zero', () => {
+      expect(deriveStatus(10, 10)).toBe('confirmed')
+      expect(deriveStatus(0, 0)).toBe('confirmed')
+    })
+
+    it('marks a zero count as not_found only when stock was expected', () => {
+      expect(deriveStatus(0, 10)).toBe('not_found')
+    })
+
+    it('marks a non-zero mismatch as inconsistent', () => {
+      expect(deriveStatus(7, 10)).toBe('inconsistent')
+      expect(deriveStatus(12, 10)).toBe('inconsistent')
+    })
+  })
 })

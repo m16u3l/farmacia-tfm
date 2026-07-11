@@ -151,11 +151,11 @@ export default function AreasPage() {
         <TableContainer sx={{ mt: 2 }}>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: "primary.light" }}>
-                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Nombre</TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Tipo</TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Estado</TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold" }}>Acciones</TableCell>
+              <TableRow>
+                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Nombre</TableCell>
+                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Tipo</TableCell>
+                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Estado</TableCell>
+                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>

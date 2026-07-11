@@ -103,6 +103,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ...validation, items: itemsResult.rows });
     } catch (error) {
       await client.query("ROLLBACK");
+      if ((error as { code?: string }).code === "23505") {
+        return NextResponse.json(
+          {
+            error:
+              "Ya existe una validación en progreso de este tipo/área. Finalícela o cancélela antes de iniciar una nueva.",
+          },
+          { status: 409 }
+        );
+      }
       throw error;
     } finally {
       client.release();

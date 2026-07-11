@@ -11,6 +11,8 @@ export interface InventoryValidation {
   started_by?: number | null;
   started_at: string;
   completed_at?: string | null;
+  inventory_adjusted_at?: string | null;
+  inventory_adjusted_by?: number | null;
   area_name?: string; // For joined queries
 }
 
@@ -20,6 +22,9 @@ export interface InventoryValidationItem {
   inventory_id: number | null;
   expected_quantity: number;
   actual_quantity: number | null;
+  // Fecha de vencimiento real observada al verificar (opcional; NULL = no se
+  // corrigió). El "esperado" es el `expiry_date` de abajo, leído en vivo.
+  actual_expiry_date?: string | null;
   status: ValidationItemStatus;
   notes?: string | null;
   verified_by?: number | null;
@@ -32,4 +37,16 @@ export interface InventoryValidationItem {
 
 export interface InventoryValidationWithItems extends InventoryValidation {
   items: InventoryValidationItem[];
+}
+
+export interface ValidationAdjustmentApplied {
+  inventory_id: number;
+  quantity?: { from: number; to: number };
+  expiry_date?: { from: string | null; to: string };
+}
+
+export interface ValidationAdjustmentResult {
+  validation: InventoryValidation;
+  applied: ValidationAdjustmentApplied[];
+  skipped: { validation_item_id: number; inventory_id: number | null; reason: string }[];
 }

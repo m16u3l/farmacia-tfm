@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationType } from '@/types';
+import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationType } from '@/types';
 
 export const validationService = {
   async createSession(data: { type: ValidationType; area_id?: number; notes?: string }): Promise<InventoryValidationWithItems> {
@@ -17,7 +17,7 @@ export const validationService = {
     return apiRequest<InventoryValidation[]>(`/api/inventory-validations${status ? `?status=${status}` : ''}`);
   },
 
-  async verifyItem(validationId: number, itemId: number, data: { actual_quantity: number; notes?: string }): Promise<InventoryValidationItem> {
+  async verifyItem(validationId: number, itemId: number, data: { actual_quantity: number; actual_expiry_date?: string | null; notes?: string }): Promise<InventoryValidationItem> {
     return apiRequest<InventoryValidationItem>(`/api/inventory-validations/${validationId}/items/${itemId}`, {
       method: 'PUT',
       body: data
@@ -32,6 +32,12 @@ export const validationService = {
 
   async cancel(id: number): Promise<InventoryValidation> {
     return apiRequest<InventoryValidation>(`/api/inventory-validations/${id}/cancel`, {
+      method: 'POST'
+    });
+  },
+
+  async applyAdjustments(id: number): Promise<ValidationAdjustmentResult> {
+    return apiRequest<ValidationAdjustmentResult>(`/api/inventory-validations/${id}/apply-adjustments`, {
       method: 'POST'
     });
   }

@@ -14,6 +14,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[] | "*"> = {
     "/products",
     "/inventory",
     "/areas",
+    "/inventory-validations",
     "/sells",
     "/orders",
     "/suppliers",
