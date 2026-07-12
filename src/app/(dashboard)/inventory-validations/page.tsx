@@ -1,4 +1,5 @@
 "use client";
+import { formatDate, formatDateTime } from "@/utils/dateUtils";
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -30,6 +31,7 @@ import BuildIcon from "@mui/icons-material/Build";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import { Inventory, InventoryArea, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, Product, ValidationType, DiscrepancyReason } from "@/types";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useValidations } from "@/hooks/useValidations";
 import { buildAreaOptions } from "@/utils/areaTree";
 import { VALIDATION_ITEM_STATUS_LABELS, VALIDATION_TYPE_LABELS } from "@/utils/validationLabels";
@@ -70,6 +72,7 @@ export default function InventoryValidationsPage() {
   });
 
   const { error, createSession, verifyItem, completeSession, cancelSession, getAll, getSession, applyAdjustments } = useValidations();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const verificationMode = activeValidation !== null;
 
   const notify = (message: string, severity: "success" | "error" | "info") =>
@@ -86,7 +89,7 @@ export default function InventoryValidationsPage() {
       const session = await getSession(inProgress[0].validation_id);
       if (session) {
         setActiveValidation(session);
-        notify(`Se reanudó la validación en progreso iniciada el ${new Date(session.started_at).toLocaleString()}.`, "info");
+        notify(`Se reanudó la validación en progreso iniciada el ${formatDateTime(session.started_at)}.`, "info");
       }
       return;
     }
@@ -266,11 +269,13 @@ export default function InventoryValidationsPage() {
     const verifiedItems = activeValidation.items.filter((i) => i.status !== "pending").length;
 
     if (verifiedItems < totalItems) {
-      if (
-        !window.confirm(
-          `Solo has verificado ${verifiedItems} de ${totalItems} items. ¿Deseas finalizar de todos modos?`
-        )
-      ) {
+      const confirmed = await confirm({
+        title: "Finalizar validación incompleta",
+        message: `Solo has verificado ${verifiedItems} de ${totalItems} items. ¿Deseas finalizar de todos modos?`,
+        confirmLabel: "Finalizar",
+        confirmColor: "primary",
+      });
+      if (!confirmed) {
         return;
       }
     }
@@ -294,11 +299,12 @@ export default function InventoryValidationsPage() {
     const verifiedItems = activeValidation.items.filter((i) => i.status !== "pending").length;
 
     if (verifiedItems > 0) {
-      if (
-        !window.confirm(
-          "¿Deseas cancelar la validación? Se perderán todos los datos."
-        )
-      ) {
+      const confirmed = await confirm({
+        title: "Cancelar validación",
+        message: "¿Deseas cancelar la validación? Se perderán todos los datos.",
+        confirmLabel: "Cancelar validación",
+      });
+      if (!confirmed) {
         return;
       }
     }
@@ -355,11 +361,11 @@ export default function InventoryValidationsPage() {
           item.expected_quantity,
           item.actual_quantity ?? "N/A",
           item.actual_quantity !== null ? difference : "N/A",
-          item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : "N/A",
-          hasExpiryCorrection(item) ? new Date(item.actual_expiry_date as string).toLocaleDateString() : "N/A",
+          item.expiry_date ? formatDate(item.expiry_date) : "N/A",
+          hasExpiryCorrection(item) ? formatDate(item.actual_expiry_date as string) : "N/A",
           item.notes || "N/A",
           VALIDATION_ITEM_STATUS_LABELS[item.status].label,
-          item.verified_at ? new Date(item.verified_at).toLocaleString() : "N/A",
+          item.verified_at ? formatDateTime(item.verified_at) : "N/A",
         ];
       }),
     ]
@@ -386,7 +392,7 @@ export default function InventoryValidationsPage() {
           item.batch_number || "N/A",
           item.quantity_available,
           item.expiry_date
-            ? new Date(item.expiry_date).toLocaleDateString()
+            ? formatDate(item.expiry_date)
             : "N/A",
           status.label,
         ];
@@ -428,7 +434,7 @@ export default function InventoryValidationsPage() {
     : [];
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <PageHeader
           title="Validación de Inventario"
@@ -460,7 +466,7 @@ export default function InventoryValidationsPage() {
                     disabled={verificationMode}
                   >
                     Reanudar {VALIDATION_TYPE_LABELS[s.type]}
-                    {s.area_name ? ` — ${s.area_name}` : ""} ({new Date(s.started_at).toLocaleDateString()})
+                    {s.area_name ? ` — ${s.area_name}` : ""} ({formatDate(s.started_at)})
                   </Button>
                 ))}
               </Box>
@@ -499,8 +505,8 @@ export default function InventoryValidationsPage() {
                           <TableCell>
                             {hasExpiryCorrection(item) ? (
                               <>
-                                {new Date(item.expiry_date as string).toLocaleDateString()} →{" "}
-                                <strong>{new Date(item.actual_expiry_date as string).toLocaleDateString()}</strong>
+                                {formatDate(item.expiry_date as string)} →{" "}
+                                <strong>{formatDate(item.actual_expiry_date as string)}</strong>
                               </>
                             ) : (
                               "—"
@@ -784,7 +790,7 @@ export default function InventoryValidationsPage() {
                         </TableCell>
                         <TableCell>
                           {item.expiry_date
-                            ? new Date(item.expiry_date).toLocaleDateString()
+                            ? formatDate(item.expiry_date)
                             : "N/A"}
                         </TableCell>
                         <TableCell>
@@ -837,11 +843,11 @@ export default function InventoryValidationsPage() {
                         </TableCell>
                         <TableCell>
                           {item.expiry_date
-                            ? new Date(item.expiry_date).toLocaleDateString()
+                            ? formatDate(item.expiry_date)
                             : "N/A"}
                           {hasExpiryCorrection(item) && (
                             <Typography variant="caption" color="error" display="block">
-                              Real: {new Date(item.actual_expiry_date as string).toLocaleDateString()}
+                              Real: {formatDate(item.actual_expiry_date as string)}
                             </Typography>
                           )}
                         </TableCell>
@@ -892,6 +898,8 @@ export default function InventoryValidationsPage() {
         onClose={() => setOpenVerifyDialog(false)}
         onSubmit={handleVerifyItem}
       />
+
+      {confirmDialog}
 
       {/* Snackbar para notificaciones */}
       <Snackbar

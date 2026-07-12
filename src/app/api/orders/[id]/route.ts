@@ -3,46 +3,42 @@ import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 
-// GET - Obtener una orden específica
-export async function GET(request: Request, context: unknown) {
-  const { params } = context as { params: { id: string } };
+// GET - Obtener una solicitud específica
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
   try {
     const id = params.id;
 
-    // Obtener orden
-    const orderResult = await pool.query(
-      `SELECT 
-        o.*,
-        s.name as supplier_name
+    const result = await pool.query(
+      `SELECT
+        o.order_id,
+        o.order_date,
+        o.status,
+        o.note,
+        COALESCE(
+          json_agg(json_build_object('product_id', p.product_id, 'name', p.name))
+            FILTER (WHERE p.product_id IS NOT NULL),
+          '[]'
+        ) AS products
        FROM orders o
-       LEFT JOIN suppliers s ON o.supplier_id = s.supplier_id
-       WHERE o.order_id = $1`,
+       LEFT JOIN order_items oi ON oi.order_id = o.order_id
+       LEFT JOIN products p ON p.product_id = oi.product_id
+       WHERE o.order_id = $1
+       GROUP BY o.order_id`,
       [id]
     );
 
-    if (orderResult.rows.length === 0) {
+    if (result.rows.length === 0) {
       return NextResponse.json(
         { error: "Orden no encontrada" },
         { status: 404 }
       );
     }
 
-    const order = orderResult.rows[0];
-
-    // Obtener items de la orden
-    const itemsResult = await pool.query(
-      `SELECT 
-        oi.*,
-        p.name as product_name
-       FROM order_items oi
-       LEFT JOIN products p ON oi.product_id = p.product_id
-       WHERE oi.order_id = $1`,
-      [id]
-    );
-
-    order.items = itemsResult.rows;
-
-    return NextResponse.json(order);
+    return NextResponse.json(result.rows[0]);
   } catch (error) {
     console.error("Error al obtener orden:", error);
     return NextResponse.json(
@@ -52,26 +48,41 @@ export async function GET(request: Request, context: unknown) {
   }
 }
 
-// PUT - Actualizar orden
-export async function PUT(request: Request, context: unknown) {
-  const { params } = context as { params: { id: string } };
+// PUT - Actualizar solicitud (nota, estado y/o productos)
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
   try {
     const id = params.id;
     const body = await request.json();
-    const { supplier_id, order_date, status, total_amount, items } = body;
+    const { status, note, product_ids } = body;
+
+    if (status && !["pendiente", "comprado", "descartado"].includes(status)) {
+      return NextResponse.json(
+        { error: "Estado inválido" },
+        { status: 400 }
+      );
+    }
+    if (product_ids && (!Array.isArray(product_ids) || product_ids.length === 0)) {
+      return NextResponse.json(
+        { error: "Selecciona al menos un producto faltante" },
+        { status: 400 }
+      );
+    }
 
     const client = await pool.connect();
 
     try {
       await client.query("BEGIN");
 
-      // Actualizar orden
       const result = await client.query(
-        `UPDATE orders 
-         SET supplier_id = $1, order_date = $2, status = $3, total_amount = $4
-         WHERE order_id = $5
+        `UPDATE orders
+         SET status = COALESCE($1, status), note = COALESCE($2, note)
+         WHERE order_id = $3
          RETURNING *`,
-        [supplier_id, order_date, status, total_amount, id]
+        [status ?? null, note ?? null, id]
       );
 
       if (result.rows.length === 0) {
@@ -82,17 +93,12 @@ export async function PUT(request: Request, context: unknown) {
         );
       }
 
-      // Si se proporcionan items, actualizar
-      if (items) {
-        // Eliminar items existentes
+      if (product_ids) {
         await client.query("DELETE FROM order_items WHERE order_id = $1", [id]);
-
-        // Insertar nuevos items
-        for (const item of items) {
+        for (const productId of product_ids) {
           await client.query(
-            `INSERT INTO order_items (order_id, product_id, quantity, unit_price)
-             VALUES ($1, $2, $3, $4)`,
-            [id, item.product_id, item.quantity, item.unit_price]
+            `INSERT INTO order_items (order_id, product_id) VALUES ($1, $2)`,
+            [id, productId]
           );
         }
       }
@@ -100,7 +106,7 @@ export async function PUT(request: Request, context: unknown) {
       await client.query("COMMIT");
 
       const session = await getSessionFromRequest(request as NextRequest);
-      await logAudit(session?.userId ?? null, "update", "order", Number(id), { status, total_amount });
+      await logAudit(session?.userId ?? null, "update", "order", Number(id), { status, note, product_ids });
 
       return NextResponse.json(result.rows[0]);
     } catch (error) {
@@ -118,9 +124,12 @@ export async function PUT(request: Request, context: unknown) {
   }
 }
 
-// DELETE - Eliminar orden
-export async function DELETE(request: Request, context: unknown) {
-  const { params } = context as { params: { id: string } };
+// DELETE - Eliminar solicitud
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const params = await context.params;
   try {
     const id = params.id;
     const client = await pool.connect();
@@ -128,10 +137,8 @@ export async function DELETE(request: Request, context: unknown) {
     try {
       await client.query("BEGIN");
 
-      // Eliminar items de la orden
       await client.query("DELETE FROM order_items WHERE order_id = $1", [id]);
 
-      // Eliminar orden
       const result = await client.query(
         "DELETE FROM orders WHERE order_id = $1 RETURNING *",
         [id]

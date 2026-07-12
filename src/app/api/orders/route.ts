@@ -8,22 +8,27 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-// GET - Obtener todas las órdenes
+// GET - Obtener todas las solicitudes de reposición
 export async function GET() {
   const client = await pool.connect();
   try {
     const result = await client.query(`
-      SELECT 
-        o.*,
-        s.name as supplier_name
+      SELECT
+        o.order_id,
+        o.order_date,
+        o.status,
+        o.note,
+        COALESCE(
+          json_agg(json_build_object('product_id', p.product_id, 'name', p.name))
+            FILTER (WHERE p.product_id IS NOT NULL),
+          '[]'
+        ) AS products
       FROM orders o
-      LEFT JOIN suppliers s ON o.supplier_id = s.supplier_id
+      LEFT JOIN order_items oi ON oi.order_id = o.order_id
+      LEFT JOIN products p ON p.product_id = oi.product_id
+      GROUP BY o.order_id
       ORDER BY o.order_date DESC
     `);
-    
-    if (!result.rows) {
-      return NextResponse.json([], { status: 200, headers: corsHeaders });
-    }
     return NextResponse.json(result.rows, { headers: corsHeaders });
   } catch (error) {
     console.error("Error al obtener órdenes:", error);
@@ -36,48 +41,44 @@ export async function GET() {
   }
 }
 
-// POST - Crear nueva orden
+// POST - Crear nueva solicitud de reposición (productos faltantes + nota)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { supplier_id, order_date, status, total_amount, items } = body;
+    const { product_ids, note } = body;
 
-    // Validaciones
-    if (!supplier_id || !items || items.length === 0) {
+    if (!Array.isArray(product_ids) || product_ids.length === 0) {
       return NextResponse.json(
-        { error: "Datos incompletos" },
+        { error: "Selecciona al menos un producto faltante" },
         { status: 400 }
       );
     }
 
     const session = await getSessionFromRequest(request);
     const client = await pool.connect();
-    
+
     try {
       await client.query("BEGIN");
 
-      // Insertar orden
       const orderResult = await client.query(
-        `INSERT INTO orders (supplier_id, order_date, status, total_amount, created_by)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO orders (status, note, created_by)
+         VALUES ('pendiente', $1, $2)
          RETURNING *`,
-        [supplier_id, order_date || new Date().toISOString(), status || 'pendiente', total_amount, session?.userId ?? null]
+        [note || null, session?.userId ?? null]
       );
 
       const order = orderResult.rows[0];
 
-      // Insertar items de la orden
-      for (const item of items) {
+      for (const productId of product_ids) {
         await client.query(
-          `INSERT INTO order_items (order_id, product_id, quantity, unit_price)
-           VALUES ($1, $2, $3, $4)`,
-          [order.order_id, item.product_id, item.quantity, item.unit_price]
+          `INSERT INTO order_items (order_id, product_id) VALUES ($1, $2)`,
+          [order.order_id, productId]
         );
       }
 
       await client.query("COMMIT");
 
-      await logAudit(session?.userId ?? null, "create", "order", order.order_id, { supplier_id, total_amount });
+      await logAudit(session?.userId ?? null, "create", "order", order.order_id, { product_ids, note });
 
       return NextResponse.json(order, { status: 201 });
     } catch (error) {

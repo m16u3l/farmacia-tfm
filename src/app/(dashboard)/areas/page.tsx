@@ -24,6 +24,7 @@ import { InventoryArea, InventoryAreaFormData } from "@/types";
 import { AreaForm } from "@/components/areas/AreaForm";
 import { useAreas } from "@/hooks/useAreas";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { buildAreaOptions } from "@/utils/areaTree";
 
 const EMPTY_FORM: InventoryAreaFormData = {
@@ -48,6 +49,7 @@ export default function AreasPage() {
   });
 
   const { createArea, updateArea, deleteArea } = useAreas();
+  const { confirm, confirmDialog } = useConfirmDialog();
 
   const fetchAreas = async () => {
     try {
@@ -93,7 +95,11 @@ export default function AreasPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar esta área?")) {
+    const confirmed = await confirm({
+      title: "Eliminar área",
+      message: "¿Estás seguro de que quieres eliminar esta área de inventario?",
+    });
+    if (confirmed) {
       const success = await deleteArea(id);
       if (success) {
         setSnackbar({ open: true, message: "Área eliminada correctamente", severity: "success" });
@@ -135,7 +141,7 @@ export default function AreasPage() {
   const treeOptions = buildAreaOptions(areas);
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <PageHeader
           title="Áreas de Inventario"
@@ -171,10 +177,10 @@ export default function AreasPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <IconButton size="small" onClick={() => handleEdit(area)} color="primary">
+                    <IconButton aria-label="Editar área" size="small" onClick={() => handleEdit(area)} color="primary">
                       <EditIcon />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(area.area_id)} color="error">
+                    <IconButton aria-label="Eliminar área" size="small" onClick={() => handleDelete(area.area_id)} color="error">
                       <DeleteIcon />
                     </IconButton>
                   </TableCell>
@@ -198,6 +204,8 @@ export default function AreasPage() {
           </Typography>
         )}
       </Paper>
+
+      {confirmDialog}
 
       <AreaForm
         open={openDialog}

@@ -1,4 +1,5 @@
 "use client";
+import { formatDate, isToday } from "@/utils/dateUtils";
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -9,7 +10,13 @@ import {
   Snackbar,
   Alert,
   Tooltip,
+  Tabs,
+  Tab,
+  TextField,
+  MenuItem,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -24,6 +31,7 @@ import { useSells } from "@/hooks/useSells";
 import { useCashRegisterClosures } from "@/hooks/useCashRegisterClosures";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { fluidFontSize } from "@/utils/fluidType";
 
 export default function SellsPage() {
@@ -44,6 +52,8 @@ export default function SellsPage() {
   });
 
   const { createSell, updateSell, deleteSell } = useSells();
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const { getPendingSummary, createClosure } = useCashRegisterClosures();
   const { user } = useCurrentUser();
   const isAdmin = user?.role === "admin";
@@ -74,7 +84,11 @@ export default function SellsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Está seguro de que desea eliminar esta venta?")) {
+    const confirmed = await confirm({
+      title: "Eliminar venta",
+      message: "¿Está seguro de que desea eliminar esta venta? Esta acción no se puede deshacer.",
+    });
+    if (confirmed) {
       try {
         await deleteSell(id);
         setSnackbar({
@@ -137,6 +151,25 @@ export default function SellsPage() {
   };
 
   const [selectedSell, setSelectedSell] = useState<Sell | null>(null);
+  const [tab, setTab] = useState<"today" | "history">("today");
+  const [historyUser, setHistoryUser] = useState<string>("all");
+
+  // "Hoy": lo que se muestra por defecto (para cajero/farmacéutico el API ya
+  // devuelve solo sus propias ventas). "Historial": todas, con filtro por
+  // usuario para el admin.
+  const todaySells = sells.filter((s) => isToday(s.sell_date));
+  const historyUserOptions = Array.from(
+    new Set(sells.map((s) => s.user_name).filter(Boolean))
+  ) as string[];
+  const historySells =
+    isAdmin && historyUser !== "all"
+      ? sells.filter((s) => s.user_name === historyUser)
+      : sells;
+  const visibleSells = tab === "today" ? todaySells : historySells;
+  const visibleTotal = visibleSells.reduce(
+    (sum, s) => sum + (Number(s.total_amount) || 0),
+    0
+  );
 
   const columns: GridColDef[] = [
     { field: "sell_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
@@ -158,7 +191,7 @@ export default function SellsPage() {
       minWidth: 100,
       renderCell: (params) => (
         <Typography sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
-          {new Date(params.row.sell_date).toLocaleDateString()}
+          {formatDate(params.row.sell_date)}
         </Typography>
       ),
     },
@@ -201,6 +234,7 @@ export default function SellsPage() {
         return (
           <Box sx={{ display: "flex", gap: 1 }}>
             <IconButton
+              aria-label="Editar venta"
               color="primary"
               size="small"
               onClick={() => {
@@ -211,6 +245,7 @@ export default function SellsPage() {
               <EditIcon />
             </IconButton>
             <IconButton
+              aria-label="Eliminar venta"
               color="error"
               size="small"
               onClick={() => handleDelete(params.row.sell_id)}
@@ -224,53 +259,70 @@ export default function SellsPage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <PageHeader
           title="Ventas"
           subtitle="Registro de ventas realizadas al público"
           icon={<PointOfSaleIcon />}
           action={
-            <Box sx={{ display: "flex", gap: 1, flexDirection: { xs: "column", sm: "row" }, width: { xs: "100%", sm: "auto" } }}>
-              <Button
-                variant="outlined"
-                startIcon={<SavingsIcon />}
-                onClick={() => setOpenCloseCajaDialog(true)}
-                sx={{
-                  fontSize: fluidFontSize(0.75, 0.875),
-                  width: { xs: "100%", sm: "auto" },
-                }}
-              >
-                Cerrar caja
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  resetForm();
-                  setOpenDialog(true);
-                }}
-                sx={{
-                  fontSize: fluidFontSize(0.75, 0.875),
-                  width: { xs: "100%", sm: "auto" },
-                }}
-              >
-                Nueva venta
-              </Button>
-            </Box>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                resetForm();
+                setOpenDialog(true);
+              }}
+              sx={{
+                fontSize: fluidFontSize(0.75, 0.875),
+                width: { xs: "100%", sm: "auto" },
+              }}
+            >
+              Nueva venta
+            </Button>
           }
         />
+
+        <Tabs
+          value={tab}
+          onChange={(_, value) => setTab(value)}
+          sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
+        >
+          <Tab value="today" label="Ventas de hoy" />
+          <Tab value="history" label="Historial" />
+        </Tabs>
+
+        {tab === "history" && isAdmin && historyUserOptions.length > 0 && (
+          <TextField
+            select
+            size="small"
+            label="Usuario"
+            value={historyUser}
+            onChange={(e) => setHistoryUser(e.target.value)}
+            sx={{ mb: 2, minWidth: 200 }}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            {historyUserOptions.map((name) => (
+              <MenuItem key={name} value={name}>
+                {name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
-            rows={sells}
+            rows={visibleSells}
             columns={columns}
             getRowId={(row) => row.sell_id}
             loading={loading}
             autoHeight
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
+            columnVisibilityModel={
+              isMobile ? { sell_id: false, user_name: false, payment_method: false } : {}
+            }
             sx={{
-              minWidth: 600,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
@@ -287,12 +339,48 @@ export default function SellsPage() {
             }}
           />
         </Box>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            mt: 2,
+            pt: 2,
+            borderTop: 1,
+            borderColor: "divider",
+            flexWrap: "wrap",
+            gap: 1,
+          }}
+        >
+          <Typography variant="body1" color="text.secondary">
+            {tab === "today" ? "Total de hoy" : "Total del historial mostrado"}
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            ${visibleTotal.toFixed(2)}
+          </Typography>
+        </Box>
+
+        <Button
+          variant="outlined"
+          startIcon={<SavingsIcon />}
+          onClick={() => setOpenCloseCajaDialog(true)}
+          sx={{
+            mt: 2,
+            fontSize: fluidFontSize(0.75, 0.875),
+            width: { xs: "100%", sm: "auto" },
+          }}
+        >
+          Cerrar caja
+        </Button>
+
         {error && (
           <Typography color="error" mt={2}>
             {error}
           </Typography>
         )}
       </Paper>
+
+      {confirmDialog}
 
       <SellForm
         open={openDialog}

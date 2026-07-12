@@ -33,7 +33,50 @@ export async function GET(request: NextRequest) {
       const params: (number | string | null)[] = isAdmin ? [] : [session?.userId ?? null];
 
       let query: string;
-      if (granularity === "monthly") {
+      if (granularity === "monthly" && isAdmin) {
+        // Solo para admin: además de las ventas, costo congelado por venta
+        // (sell_items.unit_cost) y gastos del mes, para la ganancia neta
+        // (ventas − costo de productos − gastos). FULL JOIN para no perder
+        // meses que solo tienen gastos.
+        query = `
+             WITH sell_totals AS (
+               SELECT s.sell_id, s.sell_date, s.total_amount,
+                      COALESCE(SUM(si.quantity), 0) AS quantity,
+                      COALESCE(SUM(si.quantity * COALESCE(si.unit_cost, 0)), 0) AS cost
+               FROM sells s
+               LEFT JOIN sell_items si ON si.sell_id = s.sell_id
+               GROUP BY s.sell_id
+             ),
+             monthly_sales AS (
+               SELECT TO_CHAR(sell_date, 'YYYY-MM') AS month,
+                      COUNT(*)::int AS total_sales,
+                      SUM(total_amount) AS total_amount,
+                      SUM(quantity)::int AS products_sold,
+                      SUM(cost) AS total_cost
+               FROM sell_totals
+               GROUP BY TO_CHAR(sell_date, 'YYYY-MM')
+             ),
+             monthly_expenses AS (
+               SELECT TO_CHAR(expense_date, 'YYYY-MM') AS month,
+                      SUM(amount) AS total_expenses
+               FROM expenses
+               GROUP BY TO_CHAR(expense_date, 'YYYY-MM')
+             )
+             SELECT
+               COALESCE(ms.month, me.month) AS month,
+               SPLIT_PART(COALESCE(ms.month, me.month), '-', 1)::int AS year,
+               COALESCE(ms.total_sales, 0) AS total_sales,
+               COALESCE(ms.total_amount, 0) AS total_amount,
+               COALESCE(ms.products_sold, 0) AS products_sold,
+               COALESCE(ms.total_cost, 0) AS total_cost,
+               COALESCE(me.total_expenses, 0) AS total_expenses,
+               COALESCE(ms.total_amount, 0) - COALESCE(ms.total_cost, 0)
+                 - COALESCE(me.total_expenses, 0) AS net_profit
+             FROM monthly_sales ms
+             FULL JOIN monthly_expenses me ON me.month = ms.month
+             ORDER BY month DESC
+             LIMIT 12`;
+      } else if (granularity === "monthly") {
         query = `${sellTotalsCte}
              SELECT
                TO_CHAR(sell_date, 'YYYY-MM') AS month,

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { corsHeaders } from "@/lib/cors";
+import { getSessionFromRequest } from "@/lib/auth";
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
@@ -28,7 +29,15 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // Los proveedores solo puede crearlos/modificarlos un administrador.
+  const session = await getSessionFromRequest(request);
+  if (session?.role !== "admin") {
+    return NextResponse.json(
+      { error: "Solo un administrador puede modificar proveedores" },
+      { status: 403 }
+    );
+  }
   try {
     const data = await request.json();
     const {

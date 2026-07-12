@@ -1,4 +1,5 @@
 "use client";
+import { formatDate, formatDateTime } from "@/utils/dateUtils";
 import { useEffect, useMemo, useState } from "react";
 import {
   Box,
@@ -180,8 +181,8 @@ export function HistoryTab({ areas, onNotify }: HistoryTabProps) {
                     }
                   />
                 </TableCell>
-                <TableCell>{new Date(session.started_at).toLocaleString()}</TableCell>
-                <TableCell>{session.completed_at ? new Date(session.completed_at).toLocaleString() : "—"}</TableCell>
+                <TableCell>{formatDateTime(session.started_at)}</TableCell>
+                <TableCell>{session.completed_at ? formatDateTime(session.completed_at) : "—"}</TableCell>
                 <TableCell>
                   {session.status !== "completed" ? (
                     <Chip label="N/A" size="small" variant="outlined" />
@@ -273,10 +274,10 @@ export function HistoryTab({ areas, onNotify }: HistoryTabProps) {
                         <TableCell>{item.expected_quantity}</TableCell>
                         <TableCell>{item.actual_quantity ?? "—"}</TableCell>
                         <TableCell>
-                          {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : "—"}
+                          {item.expiry_date ? formatDate(item.expiry_date) : "—"}
                           {expiryCorrected && (
                             <Typography variant="caption" color="error" display="block">
-                              Real: {new Date(item.actual_expiry_date as string).toLocaleDateString()}
+                              Real: {formatDate(item.actual_expiry_date as string)}
                             </Typography>
                           )}
                         </TableCell>

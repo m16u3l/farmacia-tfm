@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "@/utils/dateUtils";
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -9,36 +10,53 @@ import {
   Snackbar,
   Alert,
   Chip,
+  Tooltip,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CheckCircleIcon from "@mui/icons-material/CheckCircleOutline";
+import BlockIcon from "@mui/icons-material/Block";
 import LocalMallIcon from "@mui/icons-material/LocalMallOutlined";
-import { Order, OrderFormData, Supplier } from "@/types";
+import { Order, OrderFormData, OrderStatus, ExpenseFormData } from "@/types";
 import { OrderForm } from "@/components/orders/OrderForm";
+import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fluidFontSize } from "@/utils/fluidType";
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [formData, setFormData] = useState<OrderFormData>({
-    supplier_id: 0,
-    order_date: new Date().toISOString(),
-    status: "pendiente",
-    total_amount: 0,
-    items: [],
+    product_ids: [],
+    note: "",
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success" as "success" | "error",
+  });
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
+  const { user } = useCurrentUser();
+  const isAdmin = user?.role === "admin";
+  // Gasto opcional ofrecido al admin al marcar una solicitud como comprada
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
+  const [expenseFormData, setExpenseFormData] = useState<ExpenseFormData>({
+    category: "orden_compra",
+    amount: "",
+    expense_date: new Date().toISOString().slice(0, 10),
+    description: "",
+    order_id: null,
   });
 
   const fetchOrders = async () => {
@@ -53,72 +71,79 @@ export default function OrdersPage() {
     }
   };
 
-  const fetchSuppliers = async () => {
-    try {
-      const response = await fetch("/api/suppliers");
-      const data = await response.json();
-      setSuppliers(data);
-    } catch {
-      console.error("Error al cargar proveedores");
-    }
-  };
-
   useEffect(() => {
     fetchOrders();
-    fetchSuppliers();
   }, []);
 
   const handleAdd = () => {
     setIsEditing(false);
     setSelectedOrder(null);
+    setFormData({ product_ids: [], note: "" });
+    setOpenDialog(true);
+  };
+
+  const handleEdit = (order: Order) => {
+    setIsEditing(true);
+    setSelectedOrder(order);
     setFormData({
-      supplier_id: 0,
-      order_date: new Date().toISOString(),
-      status: "pendiente",
-      total_amount: 0,
-      items: [],
+      product_ids: order.products.map((p) => p.product_id),
+      note: order.note || "",
     });
     setOpenDialog(true);
   };
 
-  const handleEdit = async (order: Order) => {
+  const handleStatusChange = async (order: Order, status: OrderStatus) => {
+    const confirmed = await confirm({
+      title: status === "comprado" ? "Marcar como comprado" : "Descartar solicitud",
+      message:
+        status === "comprado"
+          ? "¿Marcar esta solicitud como comprada?"
+          : "¿Descartar esta solicitud? Quedará en el historial como descartada.",
+      confirmLabel: status === "comprado" ? "Comprado" : "Descartar",
+    });
+    if (!confirmed) return;
     try {
-      // Obtener los detalles completos de la orden incluyendo items
-      const response = await fetch(`/api/orders/${order.order_id}`);
-      if (!response.ok) {
-        throw new Error("Error al cargar los detalles de la orden");
-      }
-      
-      const fullOrder = await response.json();
-      
-      // Transformar items para que coincidan con OrderFormData
-      const formattedItems = (fullOrder.items || []).map((item: Record<string, unknown>) => ({
-        product_id: Number(item.product_id),
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price),
-      }));
-      
-      setIsEditing(true);
-      setSelectedOrder(fullOrder);
-      setFormData({
-        supplier_id: fullOrder.supplier_id,
-        order_date: fullOrder.order_date,
-        status: fullOrder.status,
-        total_amount: fullOrder.total_amount,
-        items: formattedItems,
+      const response = await fetch(`/api/orders/${order.order_id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
       });
-      setOpenDialog(true);
+      if (!response.ok) throw new Error("Error al actualizar");
+      setSnackbar({
+        open: true,
+        message:
+          status === "comprado"
+            ? "Solicitud marcada como comprada"
+            : "Solicitud descartada",
+        severity: "success",
+      });
+      fetchOrders();
+      // Al comprar, el admin puede registrar de una vez el gasto real de la compra
+      if (status === "comprado" && isAdmin) {
+        setExpenseFormData({
+          category: "orden_compra",
+          amount: "",
+          expense_date: new Date().toISOString().slice(0, 10),
+          description: `Compra: ${order.products.map((p) => p.name).join(", ")}`,
+          order_id: order.order_id,
+        });
+        setExpenseFormOpen(true);
+      }
     } catch (error) {
       setSnackbar({
         open: true,
-        message: `Error al cargar la orden: ${(error as Error).message}`,
+        message: `Error al actualizar la solicitud: ${(error as Error).message}`,
         severity: "error",
       });
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar esta orden?")) {
+    const confirmed = await confirm({
+      title: "Eliminar solicitud",
+      message: "¿Eliminar esta solicitud de compra? Esta acción no se puede deshacer.",
+    });
+    if (confirmed) {
       try {
         const response = await fetch(`/api/orders/${id}`, {
           method: "DELETE",
@@ -127,7 +152,7 @@ export default function OrdersPage() {
         if (response.ok) {
           setSnackbar({
             open: true,
-            message: "Orden eliminada correctamente",
+            message: "Solicitud eliminada correctamente",
             severity: "success",
           });
           fetchOrders();
@@ -137,48 +162,23 @@ export default function OrdersPage() {
       } catch (error) {
         setSnackbar({
           open: true,
-          message: `Error al eliminar la orden: ${(error as Error).message}`,
+          message: `Error al eliminar la solicitud: ${(error as Error).message}`,
           severity: "error",
         });
       }
     }
   };
 
-  const handleFormChange = (
-    field: keyof OrderFormData,
-    value: unknown
-  ) => {
-    setFormData((prev) => {
-      const updated = { ...prev, [field]: value };
-      
-      // Recalcular total_amount cuando cambian los items
-      if (field === "items") {
-        const items = value as OrderFormData["items"];
-        updated.total_amount = items.reduce(
-          (sum, item) => sum + (item.quantity * item.unit_price),
-          0
-        );
-      }
-      
-      return updated;
-    });
+  const handleFormChange = (field: keyof OrderFormData, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (data: OrderFormData) => {
     try {
-      if (!data.supplier_id || data.supplier_id === 0) {
+      if (data.product_ids.length === 0) {
         setSnackbar({
           open: true,
-          message: "Por favor selecciona un proveedor",
-          severity: "error",
-        });
-        return;
-      }
-
-      if (!data.items || data.items.length === 0) {
-        setSnackbar({
-          open: true,
-          message: "Por favor agrega al menos un producto",
+          message: "Selecciona al menos un producto faltante",
           severity: "error",
         });
         return;
@@ -202,8 +202,8 @@ export default function OrdersPage() {
         setSnackbar({
           open: true,
           message: isEditing
-            ? "Orden actualizada correctamente"
-            : "Orden creada correctamente",
+            ? "Solicitud actualizada correctamente"
+            : "Solicitud registrada correctamente",
           severity: "success",
         });
         setOpenDialog(false);
@@ -220,65 +220,68 @@ export default function OrdersPage() {
     }
   };
 
-  const getSupplierName = (supplierId: number | string | unknown) => {
-    console.log("suppliers", supplierId);
-    const supplier = suppliers.find((s) => s.supplier_id == supplierId);
-    return supplier ? supplier.name : `${supplierId}`;
-  };
-
-  const getStatusColor = (status: string):
-    | "default"
-    | "primary"
-    | "secondary"
-    | "error"
-    | "info"
-    | "success"
-    | "warning" => {
+  const getStatusColor = (status: string): "warning" | "success" | "default" => {
     switch (status) {
       case "pendiente":
         return "warning";
-      case "aprobado":
-        return "info";
-      case "recibido":
+      case "comprado":
         return "success";
-      case "cancelado":
-        return "error";
       default:
         return "default";
     }
   };
 
   const columns: GridColDef[] = [
-    { 
-      field: "order_id", 
-      headerName: "ID", 
-      flex: 0.5, 
-      minWidth: 50, 
-      maxWidth: 70 
-    },
-    {
-      field: "supplier_name",
-      headerName: "Proveedor",
-      flex: 2,
-      minWidth: 150,
-  valueGetter: (params: { row: Record<string, unknown> }) => getSupplierName(params),
-    },
     {
       field: "order_date",
       headerName: "Fecha",
-      flex: 1.5,
-      minWidth: 120,
+      flex: 1,
+      minWidth: 100,
       renderCell: (params: GridRenderCellParams) => (
         <Typography variant="body2" sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
-          {new Date(params.value).toLocaleDateString()}
+          {formatDate(params.value)}
+        </Typography>
+      ),
+    },
+    {
+      field: "products",
+      headerName: "Productos faltantes",
+      flex: 2.5,
+      minWidth: 200,
+      sortable: false,
+      renderCell: (params: GridRenderCellParams) => (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, py: 0.5 }}>
+          {(params.row.products as Order["products"]).map((p) => (
+            <Chip
+              key={p.product_id}
+              label={p.name}
+              size="small"
+              sx={{ fontSize: fluidFontSize(0.65, 0.75) }}
+            />
+          ))}
+        </Box>
+      ),
+    },
+    {
+      field: "note",
+      headerName: "Nota",
+      flex: 2,
+      minWidth: 150,
+      renderCell: (params: GridRenderCellParams) => (
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontSize: fluidFontSize(0.75, 0.875), whiteSpace: "normal" }}
+        >
+          {params.value || "—"}
         </Typography>
       ),
     },
     {
       field: "status",
       headerName: "Estado",
-      flex: 1.2,
-      minWidth: 120,
+      flex: 1,
+      minWidth: 110,
       renderCell: (params: GridRenderCellParams) => (
         <Chip
           label={String(params.value ?? "").toUpperCase()}
@@ -289,55 +292,70 @@ export default function OrdersPage() {
       ),
     },
     {
-      field: "total_amount",
-      headerName: "Total",
-      flex: 1,
-      minWidth: 100,
-      renderCell: (params: GridRenderCellParams) => (
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            fontSize: fluidFontSize(0.75, 0.875),
-            fontWeight: 'bold',
-            color: 'primary.main'
-          }}
-        >
-          ${params.value || "0.00"}
-        </Typography>
-      ),
-    },
-    {
       field: "actions",
       headerName: "Acciones",
-      width: 120,
+      width: 160,
       sortable: false,
-      renderCell: (params: GridRenderCellParams) => (
-        <Box>
-          <IconButton
-            size="small"
-            onClick={() => handleEdit(params.row)}
-            color="primary"
-          >
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={() => handleDelete(params.row.order_id)}
-            color="error"
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Box>
-      ),
+      renderCell: (params: GridRenderCellParams) => {
+        const order = params.row as Order;
+        const isPending = order.status === "pendiente";
+        return (
+          <Box>
+            {isPending && (
+              <>
+                <Tooltip title="Marcar como comprado">
+                  <IconButton
+                    aria-label="Marcar como comprado"
+                    size="small"
+                    onClick={() => handleStatusChange(order, "comprado")}
+                    color="success"
+                  >
+                    <CheckCircleIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Descartar">
+                  <IconButton
+                    aria-label="Descartar solicitud"
+                    size="small"
+                    onClick={() => handleStatusChange(order, "descartado")}
+                  >
+                    <BlockIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Editar">
+                  <IconButton
+                    aria-label="Editar solicitud"
+                    size="small"
+                    onClick={() => handleEdit(order)}
+                    color="primary"
+                  >
+                    <EditIcon />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+            <Tooltip title="Eliminar">
+              <IconButton
+                aria-label="Eliminar solicitud"
+                size="small"
+                onClick={() => handleDelete(order.order_id)}
+                color="error"
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        );
+      },
     },
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <PageHeader
           title="Órdenes de Compra"
-          subtitle="Pedidos realizados a proveedores"
+          subtitle="Productos faltantes que se necesita comprar"
           icon={<LocalMallIcon />}
           action={
             <Button
@@ -350,7 +368,7 @@ export default function OrdersPage() {
                 maxWidth: { xs: "100%", sm: "auto" },
               }}
             >
-              Nueva Orden
+              Reportar faltante
             </Button>
           }
         />
@@ -362,10 +380,11 @@ export default function OrdersPage() {
             getRowId={(row) => row.order_id}
             loading={loading}
             autoHeight
+            getRowHeight={() => "auto"}
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
+            columnVisibilityModel={isMobile ? { note: false } : {}}
             sx={{
-              minWidth: 600,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
@@ -378,6 +397,8 @@ export default function OrdersPage() {
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
+                display: "flex",
+                alignItems: "center",
               },
             }}
           />
@@ -389,14 +410,50 @@ export default function OrdersPage() {
         )}
       </Paper>
 
+      {confirmDialog}
+
       <OrderForm
         open={openDialog}
         isEditing={isEditing}
         formData={formData}
-        suppliers={suppliers}
         onClose={() => setOpenDialog(false)}
         onSubmit={handleSubmit}
         onChange={handleFormChange}
+      />
+
+      <ExpenseForm
+        open={expenseFormOpen}
+        isEditing={false}
+        formData={expenseFormData}
+        onClose={() => setExpenseFormOpen(false)}
+        onSubmit={async (data) => {
+          try {
+            const response = await fetch("/api/expenses", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data),
+            });
+            if (!response.ok) {
+              const body = await response.json().catch(() => null);
+              throw new Error(body?.error || "Error al registrar el gasto");
+            }
+            setExpenseFormOpen(false);
+            setSnackbar({
+              open: true,
+              message: "Gasto de la compra registrado",
+              severity: "success",
+            });
+          } catch (error) {
+            setSnackbar({
+              open: true,
+              message: `Error: ${(error as Error).message}`,
+              severity: "error",
+            });
+          }
+        }}
+        onChange={(field, value) =>
+          setExpenseFormData((prev) => ({ ...prev, [field]: value }))
+        }
       />
 
       <Snackbar

@@ -42,6 +42,7 @@ const API_DOMAIN_TO_PAGE_PATH: Record<string, string> = {
   sells: "/sells",
   "cash-register-closures": "/cash-register-closures",
   orders: "/orders",
+  expenses: "/expenses",
   suppliers: "/suppliers",
   employees: "/employees",
   users: "/users",

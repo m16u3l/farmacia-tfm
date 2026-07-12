@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "@/utils/dateUtils";
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -11,7 +12,12 @@ import {
   Chip,
   FormControlLabel,
   Switch,
+  TextField,
+  MenuItem,
+  InputAdornment,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -20,11 +26,14 @@ import WarningIcon from "@mui/icons-material/Warning";
 import EventBusyIcon from "@mui/icons-material/EventBusy";
 import InventoryIconOutlined from "@mui/icons-material/Inventory2Outlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import SearchIcon from "@mui/icons-material/Search";
 import { Inventory, InventoryArea, InventoryFormData, Product } from "@/types";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { TransferDialog } from "@/components/inventory/TransferDialog";
 import { useInventory } from "@/hooks/useInventory";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { buildAreaOptions } from "@/utils/areaTree";
 import { fluidFontSize } from "@/utils/fluidType";
 
 const EMPTY_FORM: InventoryFormData = {
@@ -49,6 +58,8 @@ export default function InventoryPage() {
   const [formData, setFormData] = useState<InventoryFormData>(EMPTY_FORM);
   const [transferItem, setTransferItem] = useState<Inventory | null>(null);
   const [showOutOfStock, setShowOutOfStock] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -56,6 +67,8 @@ export default function InventoryPage() {
   });
 
   const { createInventoryItem, updateInventoryItem, deleteInventoryItem, transferInventoryItem } = useInventory();
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
 
   const fetchInventory = async () => {
     try {
@@ -158,7 +171,11 @@ export default function InventoryPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este elemento?")) {
+    const confirmed = await confirm({
+      title: "Eliminar lote de inventario",
+      message: "¿Estás seguro de que quieres eliminar este lote? Esta acción no se puede deshacer.",
+    });
+    if (confirmed) {
       try {
         const success = await deleteInventoryItem(id);
         if (success) {
@@ -265,9 +282,17 @@ export default function InventoryPage() {
   };
 
   const outOfStockCount = inventory.filter(item => item.quantity_available === 0).length;
-  const visibleInventory = showOutOfStock
-    ? inventory
-    : inventory.filter(item => item.quantity_available > 0);
+  const normalizedSearch = searchText.trim().toLowerCase();
+  const visibleInventory = inventory.filter((item) => {
+    if (!showOutOfStock && item.quantity_available <= 0) return false;
+    if (areaFilter !== "all" && String(item.area_id ?? "") !== areaFilter) return false;
+    if (normalizedSearch) {
+      const name = (item.product_name || getProductName(item.product_id)).toLowerCase();
+      const batch = (item.batch_number || "").toLowerCase();
+      if (!name.includes(normalizedSearch) && !batch.includes(normalizedSearch)) return false;
+    }
+    return true;
+  });
 
   const columns: GridColDef[] = [
     { field: "inventory_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
@@ -303,7 +328,7 @@ export default function InventoryPage() {
                 fontWeight: expired ? 'bold' : 'normal'
               }}
             >
-              {params.value ? new Date(params.value).toLocaleDateString() : "-"}
+              {params.value ? formatDate(params.value) : "-"}
             </Typography>
             {expired && (
               <Chip
@@ -386,6 +411,7 @@ export default function InventoryPage() {
       renderCell: (params: GridRenderCellParams) => (
         <Box>
           <IconButton
+            aria-label="Transferir lote"
             size="small"
             onClick={() => handleOpenTransfer(params.row)}
             color="primary"
@@ -394,6 +420,7 @@ export default function InventoryPage() {
             <SwapHorizIcon />
           </IconButton>
           <IconButton
+            aria-label="Editar lote"
             size="small"
             onClick={() => handleEdit(params.row)}
             color="primary"
@@ -401,6 +428,7 @@ export default function InventoryPage() {
             <EditIcon />
           </IconButton>
           <IconButton
+            aria-label="Eliminar lote"
             size="small"
             onClick={() => handleDelete(params.row.inventory_id)}
             color="error"
@@ -413,7 +441,7 @@ export default function InventoryPage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <PageHeader
           title="Inventario"
@@ -457,7 +485,7 @@ export default function InventoryPage() {
                     {getExpiredItems().slice(0, 5).map(item => (
                       <Chip
                         key={item.inventory_id}
-                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : 'N/A'})`}
+                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? formatDate(item.expiry_date) : 'N/A'})`}
                         size="small"
                         sx={{ 
                           bgcolor: 'error.dark',
@@ -537,7 +565,7 @@ export default function InventoryPage() {
                     {getExpiringItems().slice(0, 5).map(item => (
                       <Chip
                         key={item.inventory_id}
-                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : 'N/A'})`}
+                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? formatDate(item.expiry_date) : 'N/A'})`}
                         size="small"
                         color="warning"
                         variant="outlined"
@@ -558,7 +586,44 @@ export default function InventoryPage() {
           </Box>
         )}
 
-        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1.5,
+            mb: 1,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <TextField
+            size="small"
+            placeholder="Buscar producto o lote…"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: "1 1 220px" }}
+          />
+          <TextField
+            select
+            size="small"
+            label="Área"
+            value={areaFilter}
+            onChange={(e) => setAreaFilter(e.target.value)}
+            sx={{ flex: "0 1 200px", minWidth: 150 }}
+          >
+            <MenuItem value="all">Todas las áreas</MenuItem>
+            {buildAreaOptions(areas).map(({ area, depth }) => (
+              <MenuItem key={area.area_id} value={String(area.area_id)}>
+                {`${"— ".repeat(depth)}${area.name}`}
+              </MenuItem>
+            ))}
+          </TextField>
           <FormControlLabel
             control={
               <Switch
@@ -568,7 +633,7 @@ export default function InventoryPage() {
               />
             }
             label={`Mostrar agotados${outOfStockCount > 0 ? ` (${outOfStockCount})` : ""}`}
-            sx={{ "& .MuiFormControlLabel-label": { fontSize: fluidFontSize(0.75, 0.875) } }}
+            sx={{ ml: "auto", "& .MuiFormControlLabel-label": { fontSize: fluidFontSize(0.75, 0.875) } }}
           />
         </Box>
 
@@ -581,8 +646,19 @@ export default function InventoryPage() {
             autoHeight
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
+            columnVisibilityModel={
+              isMobile
+                ? {
+                    inventory_id: false,
+                    batch_number: false,
+                    expiry_date: false,
+                    area_name: false,
+                    purchase_price: false,
+                    sale_price: false,
+                  }
+                : {}
+            }
             sx={{
-              minWidth: 600,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
@@ -605,6 +681,8 @@ export default function InventoryPage() {
           </Typography>
         )}
       </Paper>
+
+      {confirmDialog}
 
       <InventoryForm
         open={openDialog}

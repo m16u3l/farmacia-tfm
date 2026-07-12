@@ -8,7 +8,9 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -17,7 +19,9 @@ import LocalShippingIcon from "@mui/icons-material/LocalShippingOutlined";
 import { Supplier, SupplierFormData } from "@/types";
 import { SupplierForm } from "@/components/suppliers/SupplierForm";
 import { useSuppliers } from "@/hooks/useSuppliers";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { fluidFontSize } from "@/utils/fluidType";
 
 export default function SuppliersPage() {
@@ -40,6 +44,11 @@ export default function SuppliersPage() {
   });
 
   const { createSupplier, updateSupplier, deleteSupplier } = useSuppliers();
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
+  const { user } = useCurrentUser();
+  // Los proveedores solo puede editarlos un administrador (la API también lo exige).
+  const isAdmin = user?.role === "admin";
 
   const fetchSuppliers = async () => {
     try {
@@ -71,7 +80,11 @@ export default function SuppliersPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Está seguro de que desea eliminar este proveedor?")) {
+    const confirmed = await confirm({
+      title: "Eliminar proveedor",
+      message: "¿Está seguro de que desea eliminar este proveedor? Esta acción no se puede deshacer.",
+    });
+    if (confirmed) {
       try {
         await deleteSupplier(id);
         setSnackbar({
@@ -156,6 +169,7 @@ export default function SuppliersPage() {
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", gap: 1 }}>
           <IconButton
+            aria-label="Editar proveedor"
             color="primary"
             size="small"
             onClick={() => {
@@ -165,6 +179,7 @@ export default function SuppliersPage() {
             <EditIcon />
           </IconButton>
           <IconButton
+            aria-label="Eliminar proveedor"
             color="error"
             size="small"
             onClick={() => handleDelete(params.row.supplier_id)}
@@ -177,27 +192,29 @@ export default function SuppliersPage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <PageHeader
           title="Proveedores"
           subtitle="Empresas y contactos que abastecen a la farmacia"
           icon={<LocalShippingIcon />}
           action={
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                resetForm();
-                setOpenDialog(true);
-              }}
-              sx={{
-                fontSize: fluidFontSize(0.75, 0.875),
-                width: { xs: "100%", sm: "auto" },
-              }}
-            >
-              Nuevo proveedor
-            </Button>
+            isAdmin ? (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  resetForm();
+                  setOpenDialog(true);
+                }}
+                sx={{
+                  fontSize: fluidFontSize(0.75, 0.875),
+                  width: { xs: "100%", sm: "auto" },
+                }}
+              >
+                Nuevo proveedor
+              </Button>
+            ) : undefined
           }
         />
         <Box sx={{ width: "100%", overflowX: "auto" }}>
@@ -209,8 +226,13 @@ export default function SuppliersPage() {
             autoHeight
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
+            columnVisibilityModel={{
+              ...(isMobile
+                ? { supplier_id: false, contact_name: false, email: false, address: false }
+                : {}),
+              ...(isAdmin ? {} : { actions: false }),
+            }}
             sx={{
-              minWidth: 700,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
@@ -233,6 +255,8 @@ export default function SuppliersPage() {
           </Typography>
         )}
       </Paper>
+
+      {confirmDialog}
 
       <SupplierForm
         open={openDialog}

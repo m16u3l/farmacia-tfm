@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "@/utils/dateUtils";
 import { useEffect, useState } from "react";
 import {
   Box,
@@ -58,6 +59,10 @@ interface MonthlySales {
   total_sales: number;
   total_amount: number;
   products_sold: number;
+  // Solo presentes para admin: ganancia neta = ventas − costo − gastos
+  total_cost?: number;
+  total_expenses?: number;
+  net_profit?: number;
 }
 
 const formatMonthLabel = (monthKey: string) => {
@@ -120,7 +125,7 @@ export default function ReportsPage() {
         return;
       }
       setMonthlySales(
-        data.map((row: { month: string; year: number; total_sales: number; total_amount: number; products_sold: number }) => ({
+        data.map((row: MonthlySales) => ({
           ...row,
           month: formatMonthLabel(row.month),
         }))
@@ -143,7 +148,7 @@ export default function ReportsPage() {
     const csvContent = [
       ["Fecha", "Total Ventas", "Monto Total", "Productos Vendidos"],
       ...dailySales.map((sale) => [
-        new Date(sale.date).toLocaleDateString(),
+        formatDate(sale.date),
         sale.total_sales,
         `$${sale.total_amount}`,
         sale.products_sold,
@@ -162,14 +167,26 @@ export default function ReportsPage() {
     a.click();
   };
 
+  // El API solo incluye costo/gastos/ganancia para admin
+  const hasProfit = monthlySales.some((sale) => sale.net_profit !== undefined);
+
   const handleExportMonthlySales = () => {
     const csvContent = [
-      ["Mes", "Total Ventas", "Monto Total", "Productos Vendidos"],
+      [
+        "Mes",
+        "Total Ventas",
+        "Monto Total",
+        "Productos Vendidos",
+        ...(hasProfit ? ["Costo Productos", "Gastos", "Ganancia Neta"] : []),
+      ],
       ...monthlySales.map((sale) => [
         sale.month,
         sale.total_sales,
         `$${sale.total_amount}`,
         sale.products_sold,
+        ...(hasProfit
+          ? [`$${sale.total_cost}`, `$${sale.total_expenses}`, `$${sale.net_profit}`]
+          : []),
       ]),
     ]
       .map((row) => row.join(","))
@@ -186,7 +203,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <PageHeader
           title="Reportes"
@@ -307,7 +324,7 @@ export default function ReportsPage() {
                     sx={{ "&:nth-of-type(even)": { bgcolor: "action.hover" } }}
                   >
                     <TableCell>
-                      {new Date(sale.date).toLocaleDateString()}
+                      {formatDate(sale.date)}
                     </TableCell>
                     <TableCell>{sale.total_sales}</TableCell>
                     <TableCell>
@@ -367,6 +384,19 @@ export default function ReportsPage() {
                   <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>
                     Productos Vendidos
                   </TableCell>
+                  {hasProfit && (
+                    <>
+                      <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>
+                        Costo Productos
+                      </TableCell>
+                      <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>
+                        Gastos
+                      </TableCell>
+                      <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>
+                        Ganancia Neta
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -385,6 +415,20 @@ export default function ReportsPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>{sale.products_sold}</TableCell>
+                    {hasProfit && (
+                      <>
+                        <TableCell>${sale.total_cost}</TableCell>
+                        <TableCell>${sale.total_expenses}</TableCell>
+                        <TableCell>
+                          <Typography
+                            fontWeight="bold"
+                            color={Number(sale.net_profit) >= 0 ? "success.main" : "error.main"}
+                          >
+                            ${sale.net_profit}
+                          </Typography>
+                        </TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

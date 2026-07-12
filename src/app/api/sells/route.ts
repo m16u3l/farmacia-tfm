@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         // lo dejen negativo (antes solo lo frenaba el CHECK >= 0 de Postgres,
         // con un error genérico en vez de "stock insuficiente").
         const invResult = await client.query(
-          `SELECT quantity_available, expiry_date
+          `SELECT quantity_available, expiry_date, purchase_price
            FROM inventory WHERE inventory_id = $1 FOR UPDATE`,
           [item.inventory_id]
         );
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        const { quantity_available, expiry_date } = invResult.rows[0];
+        const { quantity_available, expiry_date, purchase_price } = invResult.rows[0];
 
         if (expiry_date && new Date(expiry_date) < new Date()) {
           throw Object.assign(
@@ -115,15 +115,18 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        // unit_cost congela el precio de compra vigente: la ganancia histórica
+        // no debe cambiar si luego se actualiza purchase_price del producto.
         await client.query(
-          `INSERT INTO sell_items (sell_id, inventory_id, quantity, unit_price, subtotal)
-           VALUES ($1, $2, $3, $4, $5)`,
+          `INSERT INTO sell_items (sell_id, inventory_id, quantity, unit_price, subtotal, unit_cost)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
           [
             sellId,
             item.inventory_id,
             item.quantity,
             item.unit_price,
             item.subtotal,
+            purchase_price,
           ]
         );
 

@@ -1,5 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { getSessionFromRequest } from "@/lib/auth";
+
+// Los proveedores solo puede modificarlos un administrador; el resto de roles
+// tiene acceso de solo lectura.
+async function requireAdmin(request: NextRequest) {
+  const session = await getSessionFromRequest(request);
+  if (session?.role !== "admin") {
+    return NextResponse.json(
+      { error: "Solo un administrador puede modificar proveedores" },
+      { status: 403 }
+    );
+  }
+  return null;
+}
 
 export async function GET(
   request: Request,
@@ -36,9 +50,11 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const forbidden = await requireAdmin(request);
+  if (forbidden) return forbidden;
   const params = await context.params;
   try {
     const id = parseInt(params.id);
@@ -100,9 +116,11 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const forbidden = await requireAdmin(request);
+  if (forbidden) return forbidden;
   const params = await context.params;
   try {
     const id = parseInt(params.id);

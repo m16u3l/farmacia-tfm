@@ -1,4 +1,5 @@
 "use client";
+import { formatDate, formatDateTime } from "@/utils/dateUtils";
 import { useMemo, useState } from "react";
 import {
   Box,
@@ -22,9 +23,11 @@ import { CLOSURE_STATUS_LABELS } from "@/types";
 import { useCashRegisterClosures } from "@/hooks/useCashRegisterClosures";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 
 export default function CashRegisterClosuresPage() {
   const { closures, isLoading, cancelClosure, error } = useCashRegisterClosures();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const { user } = useCurrentUser();
   const isAdmin = user?.role === "admin";
   const [userFilter, setUserFilter] = useState<string>("all");
@@ -49,7 +52,12 @@ export default function CashRegisterClosuresPage() {
   }, [closures, isAdmin, userFilter]);
 
   const handleCancel = async (id: number) => {
-    if (!window.confirm("¿Anular este cierre de caja? Las ventas incluidas quedarán disponibles de nuevo.")) {
+    const confirmed = await confirm({
+      title: "Anular cierre de caja",
+      message: "¿Anular este cierre de caja? Las ventas incluidas quedarán disponibles de nuevo.",
+      confirmLabel: "Anular",
+    });
+    if (!confirmed) {
       return;
     }
     setCancellingId(id);
@@ -64,7 +72,7 @@ export default function CashRegisterClosuresPage() {
   };
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <PageHeader
           title="Cierres de caja"
@@ -119,7 +127,7 @@ export default function CashRegisterClosuresPage() {
                   <TableRow key={c.closure_id} sx={{ "&:nth-of-type(even)": { bgcolor: "action.hover" } }}>
                     {isAdmin && <TableCell>{c.user_name || "—"}</TableCell>}
                     <TableCell>
-                      {new Date(c.period_start).toLocaleDateString()} – {new Date(c.period_end).toLocaleString()}
+                      {formatDate(c.period_start)} – {formatDateTime(c.period_end)}
                     </TableCell>
                     <TableCell>{c.sell_count}</TableCell>
                     <TableCell>${Number(c.total_amount).toFixed(2)}</TableCell>
@@ -180,6 +188,8 @@ export default function CashRegisterClosuresPage() {
           </Typography>
         )}
       </Paper>
+
+      {confirmDialog}
 
       <Snackbar
         open={snackbar.open}

@@ -23,6 +23,7 @@ import PeopleIcon from "@mui/icons-material/GroupsOutlined";
 import BadgeIcon from "@mui/icons-material/BadgeOutlined";
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
+import PaymentsIcon from "@mui/icons-material/PaymentsOutlined";
 import AccountTreeIcon from "@mui/icons-material/AccountTreeOutlined";
 import FactCheckIcon from "@mui/icons-material/FactCheckOutlined";
 import SavingsIcon from "@mui/icons-material/SavingsOutlined";
@@ -73,6 +74,7 @@ const menuGroups = [
     items: [
       { text: "Empleados", icon: <BadgeIcon />, href: "/employees" },
       { text: "Usuarios", icon: <PeopleIcon />, href: "/users" },
+      { text: "Gastos", icon: <PaymentsIcon />, href: "/expenses" },
       { text: "Reportes", icon: <AssessmentIcon />, href: "/reports" },
       { text: "Configuración", icon: <SettingsIcon />, href: "/configuracion" },
     ],

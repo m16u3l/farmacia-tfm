@@ -9,7 +9,9 @@ import {
   Skeleton,
   Snackbar,
   Alert,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -19,6 +21,7 @@ import { EmployeeForm } from "@/components/employees/EmployeeForm";
 import { Employee, EmployeeFormData } from "@/types/employee";
 import { useEmployees } from "@/hooks/useEmployees";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { fluidFontSize } from "@/utils/fluidType";
 
 function LoadingState() {
@@ -72,6 +75,8 @@ export default function EmployeesPage() {
     severity: "success" as "success" | "error",
   });
   const { createEmployee, updateEmployee, deleteEmployee } = useEmployees();
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
 
   const fetchEmployees = async () => {
     try {
@@ -131,7 +136,11 @@ export default function EmployeesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Está seguro de que desea eliminar este empleado?")) {
+    const confirmed = await confirm({
+      title: "Eliminar empleado",
+      message: "¿Está seguro de que desea eliminar este empleado? Esta acción no se puede deshacer.",
+    });
+    if (confirmed) {
       try {
         await deleteEmployee(id);
         setSnackbar({
@@ -183,7 +192,7 @@ export default function EmployeesPage() {
   }
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <PageHeader
           title="Empleados"
@@ -223,8 +232,12 @@ export default function EmployeesPage() {
             slots={{
               noRowsOverlay: CustomNoRowsOverlay,
             }}
+            columnVisibilityModel={
+              isMobile
+                ? { employee_id: false, email: false, phone: false, position: false, status: false }
+                : {}
+            }
             sx={{
-              minWidth: 900,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
@@ -242,6 +255,8 @@ export default function EmployeesPage() {
           />
         </Box>
       </Paper>
+
+      {confirmDialog}
 
       <EmployeeForm
         open={openDialog}
@@ -306,6 +321,7 @@ function useEmployeesColumns({
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", gap: 1 }}>
           <IconButton
+            aria-label="Editar empleado"
             onClick={() => onEdit(params.row)}
             color="primary"
             size="small"
@@ -313,6 +329,7 @@ function useEmployeesColumns({
             <EditIcon />
           </IconButton>
           <IconButton
+            aria-label="Eliminar empleado"
             onClick={() => onDelete(params.row.employee_id)}
             color="error"
             size="small"

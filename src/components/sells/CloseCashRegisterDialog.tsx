@@ -9,6 +9,8 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import { useState, useEffect } from "react";
 import { PendingClosureSummary } from "@/types";
@@ -30,6 +32,7 @@ export function CloseCashRegisterDialog({
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [countedCash, setCountedCash] = useState("");
   const [notes, setNotes] = useState("");
+  const [qrConfirmed, setQrConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +41,7 @@ export function CloseCashRegisterDialog({
     setSummary(null);
     setCountedCash("");
     setNotes("");
+    setQrConfirmed(false);
     setError(null);
     setLoadingSummary(true);
     getPendingSummary()
@@ -47,6 +51,7 @@ export function CloseCashRegisterDialog({
   }, [open, getPendingSummary]);
 
   const totalEfectivo = summary ? Number(summary.total_efectivo) : 0;
+  const totalQr = summary ? Number(summary.total_qr_transferencia) : 0;
   const parsedCountedCash = parseFloat(countedCash);
   const difference = !Number.isNaN(parsedCountedCash) ? parsedCountedCash - totalEfectivo : null;
 
@@ -85,7 +90,12 @@ export function CloseCashRegisterDialog({
 
         {!loadingSummary && summary && summary.sell_count > 0 && (
           <>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 2, mt: 1 }}>
+            <Alert severity="warning" sx={{ mt: 1, mb: 2 }}>
+              Se incluirán todas las ventas registradas desde tu último cierre de caja.
+              Una vez confirmado, las ventas quedarán bloqueadas y el cierre{" "}
+              <strong>no se podrá editar</strong>.
+            </Alert>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, mb: 2 }}>
               <Typography variant="body2">
                 Ventas a incluir: <strong>{summary.sell_count}</strong>
               </Typography>
@@ -124,6 +134,25 @@ export function CloseCashRegisterDialog({
               </Alert>
             )}
 
+            {totalQr > 0 && (
+              <FormControlLabel
+                sx={{ mb: 2, alignItems: "flex-start", "& .MuiCheckbox-root": { pt: 0 } }}
+                control={
+                  <Checkbox
+                    checked={qrConfirmed}
+                    onChange={(e) => setQrConfirmed(e.target.checked)}
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    Se registraron pagos por QR/transferencia por{" "}
+                    <strong>${totalQr.toFixed(2)}</strong>. Confirmo que revisé que ese
+                    monto llegó a la cuenta.
+                  </Typography>
+                }
+              />
+            )}
+
             <TextField
               label="Notas (opcional)"
               value={notes}
@@ -146,7 +175,12 @@ export function CloseCashRegisterDialog({
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={submitting || !summary || summary.sell_count === 0}
+          disabled={
+            submitting ||
+            !summary ||
+            summary.sell_count === 0 ||
+            (totalQr > 0 && !qrConfirmed)
+          }
         >
           Confirmar cierre
         </Button>

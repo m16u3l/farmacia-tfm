@@ -14,7 +14,9 @@ import {
   DialogContent,
   DialogActions,
   Stack,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -26,6 +28,7 @@ import { Product, ProductFormData, SaleControl, SALE_CONTROL_LABELS } from "@/ty
 import { ProductForm } from "@/components/products/ProductForm";
 import { useProducts } from "@/hooks/useProducts";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { fluidFontSize } from "@/utils/fluidType";
 
 export default function ProductsPage() {
@@ -58,6 +61,8 @@ export default function ProductsPage() {
   });
 
   const { createProduct, updateProduct, deleteProduct } = useProducts();
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
 
   const fetchProducts = async () => {
     try {
@@ -106,7 +111,11 @@ export default function ProductsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("¿Está seguro de que desea eliminar este producto?")) {
+    const confirmed = await confirm({
+      title: "Eliminar producto",
+      message: "¿Está seguro de que desea eliminar este producto? Esta acción no se puede deshacer.",
+    });
+    if (confirmed) {
       try {
         await deleteProduct(id);
         setSnackbar({
@@ -238,6 +247,7 @@ export default function ProductsPage() {
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", gap: 1 }}>
           <IconButton
+            aria-label="Ver detalle del producto"
             color="default"
             size="small"
             onClick={() => setDetailProduct(params.row)}
@@ -245,6 +255,7 @@ export default function ProductsPage() {
             <VisibilityIcon />
           </IconButton>
           <IconButton
+            aria-label="Editar producto"
             color="primary"
             size="small"
             onClick={() => {
@@ -255,6 +266,7 @@ export default function ProductsPage() {
             <EditIcon />
           </IconButton>
           <IconButton
+            aria-label="Eliminar producto"
             color="error"
             size="small"
             onClick={() => handleDelete(params.row.product_id)}
@@ -267,7 +279,7 @@ export default function ProductsPage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
         <PageHeader
           title="Productos"
@@ -299,8 +311,25 @@ export default function ProductsPage() {
             autoHeight
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
+            columnVisibilityModel={
+              isMobile
+                ? {
+                    product_id: false,
+                    laboratory: false,
+                    active_ingredient: false,
+                    concentration: false,
+                    description: false,
+                    category: false,
+                    type: false,
+                    dosage_form: false,
+                    unit: false,
+                    barcode: false,
+                    sale_control: false,
+                    status: false,
+                  }
+                : {}
+            }
             sx={{
-              minWidth: 800,
               "& .MuiDataGrid-cell:focus": { outline: "none" },
               "& .MuiDataGrid-columnHeader": {
                 backgroundColor: (theme) => theme.palette.primary.light,
@@ -323,6 +352,8 @@ export default function ProductsPage() {
           </Typography>
         )}
       </Paper>
+
+      {confirmDialog}
 
       <ProductForm
         open={openDialog}

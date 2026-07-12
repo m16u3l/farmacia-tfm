@@ -1,3 +1,4 @@
+import { formatDate } from "@/utils/dateUtils";
 import {
   Dialog,
   DialogTitle,
@@ -5,20 +6,25 @@ import {
   DialogActions,
   TextField,
   Button,
-  MenuItem,
   IconButton,
   Box,
   Typography,
   Autocomplete,
   createFilterOptions,
-  Grid,
   Alert,
   Chip,
+  Paper,
+  ToggleButton,
+  ToggleButtonGroup,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { SellFormData, SellItem, PaymentMethod, PAYMENT_METHOD_LABELS, Inventory } from "@/types";
 import { SALE_CONTROL_LABELS } from "@/types/products";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
+import CloseIcon from "@mui/icons-material/Close";
 import { useState, useEffect, useMemo } from "react";
 
 // Normaliza para comparar nombres sin distinguir may/min ni acentos
@@ -46,6 +52,15 @@ const levenshtein = (a: string, b: string) => {
   return dp[a.length][b.length];
 };
 
+const getStockColor = (qty: number): "error" | "warning" | "success" => {
+  if (qty <= 0) return "error";
+  if (qty <= 5) return "warning";
+  return "success";
+};
+
+// Los montos pueden llegar como string desde el API (numeric de Postgres).
+const formatMoney = (value: number | string) => `$${(Number(value) || 0).toFixed(2)}`;
+
 const filterInventoryOptions = createFilterOptions<Inventory>({
   stringify: (option) =>
     [option.product_name, option.product_barcode, option.product_active_ingredient, option.product_laboratory]
@@ -58,7 +73,7 @@ interface SellFormProps {
   isEditing: boolean;
   formData: SellFormData;
   onClose: () => void;
-  onSubmit: (data: SellFormData) => void;
+  onSubmit: (data: SellFormData) => void | Promise<void>;
   onChange: (field: keyof SellFormData, value: unknown) => void;
 }
 
@@ -70,21 +85,20 @@ export function SellForm({
   onSubmit,
   onChange,
 }: SellFormProps) {
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [selectedInventory, setSelectedInventory] = useState<Inventory | null>(null);
-  const [newItem, setNewItem] = useState<Partial<SellItem>>({
-    inventory_id: 0,
-    quantity: 1,
-    unit_price: 0,
-    subtotal: 0,
-  });
+  const [stockMsg, setStockMsg] = useState<string | null>(null);
+  const [received, setReceived] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchInventory = async () => {
       try {
         const inventoryResponse = await fetch('/api/inventory');
         const inventoryData = await inventoryResponse.json();
-        setInventory(inventoryData.filter((item: Inventory) => item.quantity_available > 0));
+        setInventory(inventoryData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -94,39 +108,97 @@ export function SellForm({
     }
   }, [open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  const addItem = () => {
-    if (selectedInventory && newItem.quantity && newItem.unit_price) {
-      // Verificar que no exceda el stock disponible
-      if (newItem.quantity > selectedInventory.quantity_available) {
-        alert(`Stock insuficiente. Disponible: ${selectedInventory.quantity_available}`);
-        return;
-      }
-
-      const subtotal = newItem.quantity * newItem.unit_price;
-      const item: SellItem = {
-        sell_item_id: 0,
-        sell_id: 0,
-        inventory_id: selectedInventory.inventory_id,
-        quantity: newItem.quantity,
-        unit_price: newItem.unit_price,
-        subtotal: subtotal,
-        inventory: selectedInventory
-      };
-      onChange("items", [...(formData.items || []), item]);
-      setNewItem({ inventory_id: 0, quantity: 1, unit_price: 0, subtotal: 0 });
+  // Limpia el estado local de la venta anterior cada vez que se abre el diálogo.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
       setSelectedInventory(null);
+      setStockMsg(null);
+      setReceived("");
+    }
+  }
+
+  const items = useMemo(() => formData.items ?? [], [formData.items]);
+  const total = useMemo(
+    () => items.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0),
+    [items]
+  );
+  const receivedAmount = parseFloat(received);
+  const change = Number.isNaN(receivedAmount) ? null : receivedAmount - total;
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  // Evita perder un carrito armado por un toque accidental fuera del diálogo;
+  // cerrar sigue disponible vía la X y "Cancelar".
+  const handleDialogClose = (_: object, reason: "backdropClick" | "escapeKeyDown") => {
+    if (items.length > 0 && (reason === "backdropClick" || reason === "escapeKeyDown")) return;
+    onClose();
+  };
+
+  const addItem = () => {
+    if (!selectedInventory) return;
+    const next = [...items];
+    const existingIndex = next.findIndex(
+      (item) => item.inventory_id === selectedInventory.inventory_id
+    );
+    if (existingIndex >= 0) {
+      const existing = next[existingIndex];
+      const quantity = Number(existing.quantity) + 1;
+      if (quantity > selectedInventory.quantity_available) {
+        setStockMsg(
+          `Ya agregaste todo el stock disponible de este lote (${selectedInventory.quantity_available}).`
+        );
+        return;
+      }
+      next[existingIndex] = {
+        ...existing,
+        quantity,
+        subtotal: quantity * (Number(existing.unit_price) || 0),
+      };
+    } else {
+      const unit_price = Number(selectedInventory.sale_price) || 0;
+      next.push({
+        sell_item_id: 0,
+        sell_id: 0,
+        inventory_id: selectedInventory.inventory_id,
+        quantity: 1,
+        unit_price,
+        subtotal: unit_price,
+        inventory: selectedInventory,
+      });
+    }
+    onChange("items", next);
+    setStockMsg(null);
+    setSelectedInventory(null);
+  };
+
+  const updateItem = (
+    index: number,
+    patch: Partial<Pick<SellItem, "quantity" | "unit_price">>
+  ) => {
+    const next = items.map((item, i) => {
+      if (i !== index) return item;
+      const quantity = patch.quantity ?? Number(item.quantity);
+      const unit_price = patch.unit_price ?? (Number(item.unit_price) || 0);
+      return { ...item, quantity, unit_price, subtotal: quantity * unit_price };
+    });
+    onChange("items", next);
+  };
+
   const removeItem = (index: number) => {
-    const items = [...(formData.items || [])];
-    items.splice(index, 1);
-    onChange("items", items);
+    onChange(
+      "items",
+      items.filter((_, i) => i !== index)
+    );
   };
 
   // FEFO (first-expired, first-out): dentro de un mismo producto, ordena los
@@ -198,134 +270,61 @@ export function SellForm({
   const PAYMENT_METHODS: PaymentMethod[] = ["efectivo", "qr_transferencia"];
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>
-          {isEditing ? "Editar Venta" : "Nueva Venta"}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 0.5, mb: 2 }}>
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                select
-                label="Método de Pago"
-                value={formData.payment_method}
-                onChange={(e) =>
-                  onChange("payment_method", e.target.value as PaymentMethod)
-                }
-                fullWidth
-                required
-              >
-                {PAYMENT_METHODS.map((method) => (
-                  <MenuItem key={method} value={method}>
-                    {PAYMENT_METHOD_LABELS[method]}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Grid>
-          </Grid>
-
-          <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-            Items de la Venta
-          </Typography>
-
-          {formData.items?.map((item, index) => (
-            <Box
-              key={index}
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 1,
-                alignItems: "center",
-                mb: 1,
-              }}
-            >
-              <Box sx={{ flex: "2 1 160px" }}>
-                <TextField
-                  label="Producto"
-                  value={item.inventory?.product_name || `ID: ${item.inventory_id}`}
-                  disabled
-                  size="small"
-                  fullWidth
-                />
-                {(item.inventory?.product_laboratory ||
-                  item.inventory?.product_active_ingredient ||
-                  item.inventory?.product_concentration) && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                    {[
-                      item.inventory?.product_laboratory,
-                      item.inventory?.product_active_ingredient,
-                      item.inventory?.product_concentration,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </Typography>
-                )}
-                {item.inventory?.product_sale_control && item.inventory.product_sale_control !== "libre" && (
-                  <Chip
-                    size="small"
-                    label={SALE_CONTROL_LABELS[item.inventory.product_sale_control]}
-                    color={item.inventory.product_sale_control === "controlado" ? "error" : "warning"}
-                    sx={{ mt: 0.5 }}
-                  />
-                )}
-              </Box>
-              <TextField
-                label="Cantidad"
-                type="number"
-                value={item.quantity}
-                disabled
-                size="small"
-                sx={{ flex: "1 1 100px" }}
-              />
-              <TextField
-                label="Precio Unitario"
-                type="number"
-                value={item.unit_price}
-                disabled
-                size="small"
-                sx={{ flex: "1 1 100px" }}
-              />
-              <TextField
-                label="Subtotal"
-                type="number"
-                value={item.subtotal}
-                disabled
-                size="small"
-                sx={{ flex: "1 1 100px" }}
-              />
-              <IconButton
-                color="error"
-                onClick={() => removeItem(index)}
-                size="small"
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          ))}
-
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", mt: 2 }}>
-            <Autocomplete
-              options={sortedInventory}
-              filterOptions={filterInventoryOptions}
-              getOptionLabel={(option) =>
-                [option.product_name || "Producto", option.product_laboratory, option.product_concentration]
-                  .filter(Boolean)
-                  .join(" - ")
-              }
-              getOptionKey={(option) => option.inventory_id}
-              renderOption={(props, option) => (
+    <Dialog open={open} onClose={handleDialogClose} maxWidth="md" fullWidth fullScreen={fullScreen}>
+      <DialogTitle
+        sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pr: 1 }}
+      >
+        {isEditing ? "Editar venta" : "Nueva venta"}
+        <IconButton aria-label="Cerrar" onClick={onClose} edge="end">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            alignItems: "flex-start",
+            flexDirection: { xs: "column", sm: "row" },
+          }}
+        >
+          <Autocomplete
+            options={sortedInventory}
+            filterOptions={filterInventoryOptions}
+            getOptionLabel={(option) =>
+              [option.product_name || "Producto", option.product_laboratory, option.product_concentration]
+                .filter(Boolean)
+                .join(" - ")
+            }
+            getOptionKey={(option) => option.inventory_id}
+            getOptionDisabled={(option) => option.quantity_available <= 0}
+            renderOption={(props, option) => {
+              const outOfStock = option.quantity_available <= 0;
+              return (
                 <Box component="li" {...props} key={option.inventory_id}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="body2">{option.product_name || "Producto"}</Typography>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                         {[option.product_laboratory, option.product_active_ingredient, option.product_concentration]
                           .filter(Boolean)
                           .join(" · ") || "Sin datos de laboratorio/principio activo"}
-                        {` — Stock: ${option.quantity_available}`}
-                        {option.expiry_date && ` — Vence: ${new Date(option.expiry_date).toLocaleDateString()}`}
+                        {option.expiry_date && ` — Vence: ${formatDate(option.expiry_date)}`}
                       </Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.25 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontWeight: 600,
+                            color: (theme) => theme.palette[getStockColor(option.quantity_available)].main,
+                          }}
+                        >
+                          {outOfStock ? "Sin stock" : `Stock: ${option.quantity_available}`}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          · {option.area_name || "Sin ubicación"}
+                        </Typography>
+                      </Box>
                     </Box>
                     {isFefoRecommended(option) && (
                       <Chip size="small" label="Vence primero" color="success" variant="outlined" />
@@ -339,133 +338,266 @@ export function SellForm({
                     )}
                   </Box>
                 </Box>
-              )}
-              value={selectedInventory}
-              onChange={(_, newValue) => {
-                setSelectedInventory(newValue);
-                if (newValue) {
-                  setNewItem({
-                    ...newItem,
-                    inventory_id: newValue.inventory_id,
-                    unit_price: newValue.sale_price || 0
-                  });
-                }
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Producto (nombre, código de barras o principio activo)" size="small" />
-              )}
-              sx={{ flex: "2 1 200px" }}
-            />
-            <TextField
-              label="Cantidad"
-              type="number"
-              value={newItem.quantity}
-              onChange={(e) => {
-                const quantity = parseInt(e.target.value);
-                const subtotal = quantity * (newItem.unit_price || 0);
-                setNewItem({ ...newItem, quantity, subtotal });
-              }}
-              size="small"
-              sx={{ flex: "1 1 100px" }}
-            />
-            <TextField
-              label="Precio Unitario"
-              type="number"
-              value={newItem.unit_price}
-              onChange={(e) => {
-                const unit_price = parseFloat(e.target.value) || 0;
-                const subtotal = (newItem.quantity || 0) * unit_price;
-                setNewItem({ ...newItem, unit_price, subtotal });
-              }}
-              size="small"
-              sx={{ flex: "1 1 100px" }}
-              inputProps={{ step: "0.01", min: "0" }}
-            />
-            <TextField
-              label="Subtotal"
-              type="number"
-              value={newItem.subtotal}
-              disabled
-              size="small"
-              sx={{ flex: "1 1 100px" }}
-            />
-            <IconButton
-              color="primary"
-              onClick={addItem}
-              size="small"
-              disabled={!selectedInventory || !newItem.quantity || newItem.quantity <= 0}
-            >
-              <AddIcon />
-            </IconButton>
-          </Box>
+              );
+            }}
+            value={selectedInventory}
+            onChange={(_, newValue) => {
+              setSelectedInventory(newValue);
+              setStockMsg(null);
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label="Producto (nombre, código de barras o principio activo)" size="small" />
+            )}
+            sx={{ flex: 1, width: "100%" }}
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={addItem}
+            disabled={!selectedInventory}
+            sx={{ width: { xs: "100%", sm: "auto" }, flexShrink: 0 }}
+          >
+            Agregar
+          </Button>
+        </Box>
 
-          {selectedInventory && (
-            <Box sx={{ mt: 1 }}>
+        {stockMsg && (
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            {stockMsg}
+          </Alert>
+        )}
+
+        {selectedInventory && (
+          <Box sx={{ mt: 1, p: 1.5, borderRadius: 1, bgcolor: "action.hover" }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {selectedInventory.product_name || "Producto"}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+              {[
+                selectedInventory.product_laboratory && `Laboratorio: ${selectedInventory.product_laboratory}`,
+                selectedInventory.product_active_ingredient &&
+                  `Principio activo: ${selectedInventory.product_active_ingredient}`,
+                selectedInventory.product_concentration &&
+                  `Concentración: ${selectedInventory.product_concentration}`,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "Este producto no tiene laboratorio/principio activo/concentración registrados"}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 0.5 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 600,
+                  color: (theme) => theme.palette[getStockColor(selectedInventory.quantity_available)].main,
+                }}
+              >
+                {selectedInventory.quantity_available <= 0
+                  ? "Sin stock disponible"
+                  : `Stock disponible: ${selectedInventory.quantity_available}`}
+              </Typography>
               <Typography variant="caption" color="text.secondary">
-                Confirmar:{" "}
-                {[
-                  selectedInventory.product_laboratory && `Laboratorio: ${selectedInventory.product_laboratory}`,
-                  selectedInventory.product_active_ingredient &&
-                    `Principio activo: ${selectedInventory.product_active_ingredient}`,
-                  selectedInventory.product_concentration &&
-                    `Concentración: ${selectedInventory.product_concentration}`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "Este producto no tiene laboratorio/principio activo/concentración registrados"}
+                Ubicación: {selectedInventory.area_name || "Sin ubicación asignada"}
               </Typography>
             </Box>
-          )}
+          </Box>
+        )}
 
-          {earlierLotForSelected && (
-            <Alert severity="info" sx={{ mt: 1 }}>
-              Sugerencia FEFO: hay otro lote de este producto que vence antes (
-              {new Date(earlierLotForSelected.expiry_date as string).toLocaleDateString()}). Considere venderlo
-              primero para evitar que caduque en el estante.
-            </Alert>
-          )}
+        {earlierLotForSelected && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            Sugerencia FEFO: hay otro lote de este producto que vence antes (
+            {formatDate(earlierLotForSelected.expiry_date as string)}). Considere venderlo
+            primero para evitar que caduque en el estante.
+          </Alert>
+        )}
 
-          {selectedInventory?.product_sale_control && selectedInventory.product_sale_control !== "libre" && (
-            <Alert severity={selectedInventory.product_sale_control === "controlado" ? "error" : "warning"} sx={{ mt: 1 }}>
-              {selectedInventory.product_sale_control === "controlado"
-                ? "Producto de control especial — verifique receta y registre según protocolo antes de vender."
-                : "Producto que requiere receta médica — verifique la receta antes de vender."}
-            </Alert>
-          )}
+        {selectedInventory?.product_sale_control && selectedInventory.product_sale_control !== "libre" && (
+          <Alert severity={selectedInventory.product_sale_control === "controlado" ? "error" : "warning"} sx={{ mt: 1 }}>
+            {selectedInventory.product_sale_control === "controlado"
+              ? "Producto de control especial — verifique receta y registre según protocolo antes de vender."
+              : "Producto que requiere receta médica — verifique la receta antes de vender."}
+          </Alert>
+        )}
 
-          {similarNameWarnings.length > 0 && (
-            <Alert severity="warning" sx={{ mt: 1 }}>
-              Cuidado: existen productos con nombre parecido que podrían confundirse —{" "}
-              {similarNameWarnings
-                .map((item) =>
-                  [item.product_name, item.product_laboratory, item.product_concentration]
-                    .filter(Boolean)
-                    .join(" ")
-                )
-                .join(", ")}
-              . Verifique que seleccionó el producto correcto antes de agregarlo.
-            </Alert>
-          )}
+        {similarNameWarnings.length > 0 && (
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            Cuidado: existen productos con nombre parecido que podrían confundirse —{" "}
+            {similarNameWarnings
+              .map((item) =>
+                [item.product_name, item.product_laboratory, item.product_concentration]
+                  .filter(Boolean)
+                  .join(" ")
+              )
+              .join(", ")}
+            . Verifique que seleccionó el producto correcto antes de agregarlo.
+          </Alert>
+        )}
 
-          <TextField
-            label="Total"
-            type="number"
-            value={formData.items?.reduce((sum, item) => sum + item.subtotal, 0) ?? 0}
-            fullWidth
-            disabled
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={!formData.items?.length}
-          >
-            {isEditing ? "Guardar" : "Crear"}
-          </Button>
-        </DialogActions>
-      </form>
+        <Typography variant="h6" sx={{ mt: 2.5, mb: 1 }}>
+          Productos {items.length > 0 && `(${items.length})`}
+        </Typography>
+
+        {items.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
+            Busca un producto arriba para agregarlo a la venta.
+          </Typography>
+        )}
+
+        {items.map((item, index) => {
+          const maxQuantity = item.inventory?.quantity_available;
+          return (
+            <Paper key={`${item.inventory_id}-${index}`} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {item.inventory?.product_name || `ID: ${item.inventory_id}`}
+                  </Typography>
+                  {(item.inventory?.product_laboratory ||
+                    item.inventory?.product_active_ingredient ||
+                    item.inventory?.product_concentration) && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      {[
+                        item.inventory?.product_laboratory,
+                        item.inventory?.product_active_ingredient,
+                        item.inventory?.product_concentration,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </Typography>
+                  )}
+                  {item.inventory?.product_sale_control && item.inventory.product_sale_control !== "libre" && (
+                    <Chip
+                      size="small"
+                      label={SALE_CONTROL_LABELS[item.inventory.product_sale_control]}
+                      color={item.inventory.product_sale_control === "controlado" ? "error" : "warning"}
+                      sx={{ mt: 0.5 }}
+                    />
+                  )}
+                </Box>
+                <IconButton
+                  aria-label="Quitar producto"
+                  color="error"
+                  size="small"
+                  onClick={() => removeItem(index)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1, flexWrap: "wrap" }}>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <IconButton
+                    aria-label="Disminuir cantidad"
+                    size="small"
+                    onClick={() => updateItem(index, { quantity: item.quantity - 1 })}
+                    disabled={item.quantity <= 1}
+                  >
+                    <RemoveIcon fontSize="small" />
+                  </IconButton>
+                  <Typography sx={{ minWidth: 32, textAlign: "center", fontWeight: 600 }}>
+                    {item.quantity}
+                  </Typography>
+                  <IconButton
+                    aria-label="Aumentar cantidad"
+                    size="small"
+                    onClick={() => updateItem(index, { quantity: item.quantity + 1 })}
+                    disabled={maxQuantity !== undefined && item.quantity >= maxQuantity}
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+                <TextField
+                  label="Precio unit."
+                  type="number"
+                  size="small"
+                  value={item.unit_price}
+                  onChange={(e) =>
+                    updateItem(index, { unit_price: parseFloat(e.target.value) || 0 })
+                  }
+                  inputProps={{ step: "0.01", min: "0" }}
+                  sx={{ width: 110 }}
+                />
+                <Typography sx={{ ml: "auto", fontWeight: 700 }}>
+                  {formatMoney(item.subtotal)}
+                </Typography>
+              </Box>
+            </Paper>
+          );
+        })}
+      </DialogContent>
+
+      <Box sx={{ px: { xs: 2, sm: 3 }, pt: 1.5 }}>
+        <ToggleButtonGroup
+          exclusive
+          fullWidth
+          size="small"
+          color="primary"
+          value={formData.payment_method}
+          onChange={(_, value) => value && onChange("payment_method", value as PaymentMethod)}
+        >
+          {PAYMENT_METHODS.map((method) => (
+            <ToggleButton key={method} value={method}>
+              {PAYMENT_METHOD_LABELS[method]}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", mt: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            Total
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            {formatMoney(total)}
+          </Typography>
+        </Box>
+
+        {formData.payment_method === "efectivo" && total > 0 && (
+          <Box sx={{ display: "flex", gap: 1.5, mt: 1, alignItems: "center" }}>
+            <TextField
+              label="Monto recibido"
+              type="number"
+              size="small"
+              value={received}
+              onChange={(e) => setReceived(e.target.value)}
+              inputProps={{ step: "0.01", min: "0", inputMode: "decimal" }}
+              sx={{ maxWidth: 170 }}
+            />
+            <Box sx={{ ml: "auto", textAlign: "right" }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                Cambio
+              </Typography>
+              <Typography
+                sx={{
+                  fontWeight: 700,
+                  color: change !== null && change < 0 ? "error.main" : "success.main",
+                }}
+              >
+                {change === null
+                  ? "—"
+                  : change < 0
+                    ? `Faltan ${formatMoney(-change)}`
+                    : formatMoney(change)}
+              </Typography>
+            </Box>
+          </Box>
+        )}
+      </Box>
+
+      <DialogActions sx={{ px: { xs: 2, sm: 3 }, pb: 2, pt: 1.5 }}>
+        <Button onClick={onClose} disabled={submitting}>
+          Cancelar
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={!items.length || submitting}
+          sx={{ flexGrow: { xs: 1, sm: 0 } }}
+        >
+          {submitting
+            ? "Guardando…"
+            : isEditing
+              ? "Guardar cambios"
+              : `Cobrar ${formatMoney(total)}`}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

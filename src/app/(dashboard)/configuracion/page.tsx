@@ -92,7 +92,7 @@ export default function ConfiguracionPage() {
   }
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, maxWidth: 600, mx: "auto" }}>
         <PageHeader
           title="Configuración del Sistema"

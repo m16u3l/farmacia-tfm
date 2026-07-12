@@ -160,15 +160,20 @@ ALTER TABLE users
   FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE SET NULL;
 
 -- -----------------------------------------------------------------------------
--- 7. orders + order_items — órdenes de compra a proveedores
+-- 7. orders + order_items — solicitudes de reposición ("falta X, hay que
+--    comprarlo"): productos + nota, sin proveedor ni cantidades obligatorias.
+--    El monto real de la compra se registra como gasto (tabla expenses) al
+--    marcar la solicitud como comprada. supplier_id/quantity/unit_price quedan
+--    solo para órdenes históricas anteriores a la migración 016.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS orders (
   order_id      SERIAL PRIMARY KEY,
-  supplier_id   INTEGER NOT NULL REFERENCES suppliers(supplier_id) ON DELETE RESTRICT,
+  supplier_id   INTEGER REFERENCES suppliers(supplier_id) ON DELETE RESTRICT,
   order_date    TIMESTAMP NOT NULL DEFAULT NOW(),
   status        VARCHAR(20) NOT NULL DEFAULT 'pendiente'
-                CHECK (status IN ('pendiente', 'aprobado', 'recibido', 'cancelado')),
+                CHECK (status IN ('pendiente', 'comprado', 'descartado')),
   total_amount  NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
+  note          TEXT,
   created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL
 );
 
@@ -176,8 +181,8 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_item_id  SERIAL PRIMARY KEY,
   order_id       INTEGER NOT NULL REFERENCES orders(order_id) ON DELETE CASCADE,
   product_id     INTEGER NOT NULL REFERENCES products(product_id) ON DELETE RESTRICT,
-  quantity       INTEGER NOT NULL CHECK (quantity > 0),
-  unit_price     NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0)
+  quantity       INTEGER CHECK (quantity > 0),
+  unit_price     NUMERIC(10, 2) CHECK (unit_price >= 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_supplier_id ON orders(supplier_id);
@@ -202,7 +207,10 @@ CREATE TABLE IF NOT EXISTS sell_items (
   inventory_id  INTEGER NOT NULL REFERENCES inventory(inventory_id) ON DELETE RESTRICT,
   quantity      INTEGER NOT NULL CHECK (quantity > 0),
   unit_price    NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0),
-  subtotal      NUMERIC(10, 2) NOT NULL CHECK (subtotal >= 0)
+  subtotal      NUMERIC(10, 2) NOT NULL CHECK (subtotal >= 0),
+  -- Precio de compra del lote congelado al momento de la venta, para que la
+  -- ganancia histórica no cambie si luego se actualiza purchase_price.
+  unit_cost     NUMERIC(10, 2)
 );
 
 -- -----------------------------------------------------------------------------
@@ -243,6 +251,24 @@ CREATE INDEX IF NOT EXISTS idx_sell_items_inventory_id ON sell_items(inventory_i
 CREATE INDEX IF NOT EXISTS idx_sells_closure_id ON sells(closure_id);
 CREATE INDEX IF NOT EXISTS idx_cash_register_closures_user_id ON cash_register_closures(user_id);
 CREATE INDEX IF NOT EXISTS idx_cash_register_closures_status ON cash_register_closures(status);
+
+-- -----------------------------------------------------------------------------
+-- 8c. expenses — gastos administrativos y de compras. Los de categoría
+--     orden_compra pueden vincularse a la solicitud de reposición que los
+--     originó. Se restan en el reporte de ganancia neta.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS expenses (
+  expense_id    SERIAL PRIMARY KEY,
+  category      VARCHAR(30) NOT NULL CHECK (category IN ('administrativo', 'orden_compra')),
+  amount        NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
+  expense_date  DATE NOT NULL DEFAULT CURRENT_DATE,
+  description   TEXT,
+  order_id      INTEGER REFERENCES orders(order_id) ON DELETE SET NULL,
+  created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses(expense_date);
 
 -- -----------------------------------------------------------------------------
 -- 9. configuracion — parámetros operativos del sistema (vista /configuracion).

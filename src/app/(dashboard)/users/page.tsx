@@ -8,7 +8,9 @@ import {
   Typography,
   Paper,
   Skeleton,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -20,6 +22,7 @@ import { Employee } from "@/types/employee";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useUsers } from "@/hooks/useUsers";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { fluidFontSize } from "@/utils/fluidType";
 import Chip from "@mui/material/Chip";
 import Alert from "@mui/material/Alert";
@@ -65,6 +68,8 @@ export default function UsersPage() {
     saveUsuario,
     deleteUsuario,
   } = useUsers();
+  const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -108,7 +113,11 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("¿Está seguro de eliminar este usuario?")) {
+    const confirmed = await confirm({
+      title: "Eliminar usuario",
+      message: "¿Está seguro de eliminar este usuario? Perderá el acceso al sistema.",
+    });
+    if (confirmed) {
       await deleteUsuario(id);
     }
   };
@@ -146,7 +155,7 @@ export default function UsersPage() {
   }
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <PageHeader
           title="Usuarios"
@@ -190,8 +199,12 @@ export default function UsersPage() {
             slots={{
               noRowsOverlay: CustomNoRowsOverlay,
             }}
+            columnVisibilityModel={
+              isMobile
+                ? { id: false, last_name: false, email: false, is_active: false }
+                : {}
+            }
             sx={{
-              minWidth: 600,
               "& .MuiDataGrid-cell:focus": {
                 outline: "none",
               },
@@ -212,6 +225,8 @@ export default function UsersPage() {
             }}
           />
         </Box>
+
+        {confirmDialog}
 
         <UserForm
           open={openDialog}
@@ -296,6 +311,7 @@ function useUsersColumns({
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", gap: 1 }}>
           <IconButton
+            aria-label="Editar usuario"
             onClick={() => onEdit(params.row)}
             color="primary"
             size="small"
@@ -303,6 +319,7 @@ function useUsersColumns({
             <EditIcon />
           </IconButton>
           <IconButton
+            aria-label="Eliminar usuario"
             onClick={() => onDelete(params.row.id)}
             color="error"
             size="small"

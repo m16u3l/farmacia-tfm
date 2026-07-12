@@ -101,7 +101,7 @@ export default function DashboardHomePage() {
   ];
 
   return (
-    <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
+    <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
         <PageHeader
           title="Panel de BioFarm"

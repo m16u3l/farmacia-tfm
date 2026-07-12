@@ -1,4 +1,5 @@
 "use client";
+import { formatDate } from "@/utils/dateUtils";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -40,7 +41,7 @@ const toDateInputValue = (date: string | null | undefined): string => {
 // (ej. Bolivia, UTC-4) toLocaleDateString() lo muestra un día antes.
 const formatDateOnly = (dateOnly: string): string => {
   const [year, month, day] = dateOnly.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString();
+  return formatDate(new Date(year, month - 1, day));
 };
 
 export function VerifyItemDialog({ open, item, onClose, onSubmit }: VerifyItemDialogProps) {
