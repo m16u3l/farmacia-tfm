@@ -9,6 +9,8 @@ import {
   Snackbar,
   Alert,
   Chip,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
@@ -46,6 +48,7 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
   const [formData, setFormData] = useState<InventoryFormData>(EMPTY_FORM);
   const [transferItem, setTransferItem] = useState<Inventory | null>(null);
+  const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -260,6 +263,11 @@ export default function InventoryPage() {
   const getExpiredItems = () => {
     return inventory.filter(item => item.expiry_date && isExpired(item.expiry_date));
   };
+
+  const outOfStockCount = inventory.filter(item => item.quantity_available === 0).length;
+  const visibleInventory = showOutOfStock
+    ? inventory
+    : inventory.filter(item => item.quantity_available > 0);
 
   const columns: GridColDef[] = [
     { field: "inventory_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
@@ -550,9 +558,23 @@ export default function InventoryPage() {
           </Box>
         )}
 
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showOutOfStock}
+                onChange={(e) => setShowOutOfStock(e.target.checked)}
+                size="small"
+              />
+            }
+            label={`Mostrar agotados${outOfStockCount > 0 ? ` (${outOfStockCount})` : ""}`}
+            sx={{ "& .MuiFormControlLabel-label": { fontSize: fluidFontSize(0.75, 0.875) } }}
+          />
+        </Box>
+
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
-            rows={inventory}
+            rows={visibleInventory}
             columns={columns}
             getRowId={(row) => row.inventory_id}
             loading={loading}

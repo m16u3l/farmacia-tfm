@@ -183,6 +183,7 @@ export function SellForm({
             <Autocomplete
               options={inventory}
               getOptionLabel={(option) => `${option.product_name || 'Producto'} - Stock: ${option.quantity_available}`}
+              getOptionKey={(option) => option.inventory_id}
               value={selectedInventory}
               onChange={(_, newValue) => {
                 setSelectedInventory(newValue);
