@@ -9,11 +9,17 @@ import {
   Snackbar,
   Alert,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stack,
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import StorefrontIcon from "@mui/icons-material/StorefrontOutlined";
 import { Product, ProductFormData } from "@/types/products";
 // Date utilities removed as they're not used
@@ -155,6 +161,7 @@ export default function ProductsPage() {
   };
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
 
   const columns: GridColDef[] = [
     { field: "product_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
@@ -182,10 +189,17 @@ export default function ProductsPage() {
     {
       field: "actions",
       headerName: "Acciones",
-      flex: 0.7,
-      minWidth: 120,
+      flex: 0.9,
+      minWidth: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Box sx={{ display: "flex", gap: 1 }}>
+          <IconButton
+            color="default"
+            size="small"
+            onClick={() => setDetailProduct(params.row)}
+          >
+            <VisibilityIcon />
+          </IconButton>
           <IconButton
             color="primary"
             size="small"
@@ -274,6 +288,46 @@ export default function ProductsPage() {
         onSubmit={handleSubmit}
         onChange={handleFormChange}
       />
+
+      <Dialog
+        open={detailProduct !== null}
+        onClose={() => setDetailProduct(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{detailProduct?.name}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                Descripción
+              </Typography>
+              <Typography variant="body2">
+                {detailProduct?.description || "Sin descripción"}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                Posibles usos
+              </Typography>
+              <Typography variant="body2">
+                {detailProduct?.possible_uses || "Sin información"}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                Información adicional
+              </Typography>
+              <Typography variant="body2">
+                {detailProduct?.additional_info || "Sin información"}
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailProduct(null)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}

@@ -2,6 +2,8 @@ export interface Product {
   product_id: number;
   name: string;
   description?: string | null;
+  possible_uses?: string | null;
+  additional_info?: string | null;
   category?: string | null;
   type?: string | null;
   dosage_form?: string | null;
