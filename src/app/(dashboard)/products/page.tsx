@@ -37,6 +37,8 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     description: "",
+    possible_uses: "",
+    additional_info: "",
     category: "",
     type: "",
     dosage_form: "",
@@ -80,6 +82,8 @@ export default function ProductsPage() {
     setFormData({
       name: product.name ?? "",
       description: product.description ?? "",
+      possible_uses: product.possible_uses ?? "",
+      additional_info: product.additional_info ?? "",
       category: product.category ?? "",
       type: product.type ?? "",
       dosage_form: product.dosage_form ?? "",
@@ -150,6 +154,8 @@ export default function ProductsPage() {
     setFormData({
       name: "",
       description: "",
+      possible_uses: "",
+      additional_info: "",
       category: "",
       type: "",
       dosage_form: "",

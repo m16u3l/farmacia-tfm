@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ThemeRegistry from "@/components/ThemeRegistry/ThemeRegistry";
-import { CronInitializer } from "@/components/CronInitializer";
 import moment from "moment";
 import "moment/locale/es";
 
@@ -36,7 +35,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeRegistry>
-          <CronInitializer />
           {children}
         </ThemeRegistry>
       </body>

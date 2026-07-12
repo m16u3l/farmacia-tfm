@@ -69,6 +69,30 @@ export function ProductForm({
                 onChange={(e) => onChange("description", e.target.value)}
               />
             </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Usos posibles"
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="Ej. alivio del dolor leve a moderado, fiebre"
+                helperText="Indicaciones del producto, para consulta rápida en mostrador"
+                value={formData.possible_uses ?? ""}
+                onChange={(e) => onChange("possible_uses", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Información adicional"
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="Ej. precauciones, contraindicaciones, conservación"
+                helperText="Precauciones, contraindicaciones u otra información relevante"
+                value={formData.additional_info ?? ""}
+                onChange={(e) => onChange("additional_info", e.target.value)}
+              />
+            </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 select

@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { getConfiguracionThresholds, ConfiguracionThresholds } from "@/lib/configuracion";
 
-const ITEM_FILTERS: Record<string, string> = {
-  area: "i.area_id = $2",
-  expiring: "i.expiry_date IS NOT NULL AND i.expiry_date >= CURRENT_DATE AND i.expiry_date <= CURRENT_DATE + INTERVAL '40 days'",
-  expired: "i.expiry_date IS NOT NULL AND i.expiry_date < CURRENT_DATE",
-  low_stock: "i.quantity_available <= 10",
+// area/expired no dependen de configuración; expiring/low_stock sí, y su
+// umbral se interpola directamente (no como parámetro $N) porque ya viene
+// validado como entero desde getConfiguracionThresholds, nunca de un usuario.
+const ITEM_FILTERS: Record<string, (thresholds: ConfiguracionThresholds) => string> = {
+  area: () => "i.area_id = $2",
+  expiring: ({ expiry_alert_days }) =>
+    `i.expiry_date IS NOT NULL AND i.expiry_date >= CURRENT_DATE AND i.expiry_date <= CURRENT_DATE + INTERVAL '${expiry_alert_days} days'`,
+  expired: () => "i.expiry_date IS NOT NULL AND i.expiry_date < CURRENT_DATE",
+  low_stock: ({ low_stock_threshold }) => `i.quantity_available <= ${low_stock_threshold}`,
 };
 
 export async function GET(request: NextRequest) {
@@ -71,7 +76,8 @@ export async function POST(request: NextRequest) {
       );
       const validation = validationResult.rows[0];
 
-      const filterClause = ITEM_FILTERS[type];
+      const thresholds = await getConfiguracionThresholds(client);
+      const filterClause = ITEM_FILTERS[type](thresholds);
       const filterParams = type === "area" ? [validation.validation_id, area_id] : [validation.validation_id];
 
       await client.query(

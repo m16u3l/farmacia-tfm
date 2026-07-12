@@ -88,6 +88,38 @@ export async function POST(request: NextRequest) {
 
       // Insertar los items de la venta
       for (const item of items) {
+        // Lock de la fila de inventario antes de leer/descontar: evita que dos
+        // ventas concurrentes del mismo lote lean el mismo stock disponible y
+        // lo dejen negativo (antes solo lo frenaba el CHECK >= 0 de Postgres,
+        // con un error genérico en vez de "stock insuficiente").
+        const invResult = await client.query(
+          `SELECT quantity_available, expiry_date
+           FROM inventory WHERE inventory_id = $1 FOR UPDATE`,
+          [item.inventory_id]
+        );
+
+        if (invResult.rows.length === 0) {
+          throw Object.assign(new Error("Uno de los lotes ya no existe en el inventario"), {
+            statusCode: 404,
+          });
+        }
+
+        const { quantity_available, expiry_date } = invResult.rows[0];
+
+        if (expiry_date && new Date(expiry_date) < new Date()) {
+          throw Object.assign(
+            new Error("No se puede vender un lote vencido (revise Validación de Inventario)"),
+            { statusCode: 409 }
+          );
+        }
+
+        if (quantity_available < item.quantity) {
+          throw Object.assign(
+            new Error(`Stock insuficiente: solo quedan ${quantity_available} unidades disponibles`),
+            { statusCode: 409 }
+          );
+        }
+
         await client.query(
           `INSERT INTO sell_items (sell_id, inventory_id, quantity, unit_price, subtotal)
            VALUES ($1, $2, $3, $4, $5)`,
@@ -133,9 +165,10 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error creating sell:", error);
+    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
     return NextResponse.json(
-      { error: "Error al crear la venta" },
-      { status: 500 }
+      { error: statusCode === 500 ? "Error al crear la venta" : (error as Error).message },
+      { status: statusCode }
     );
   }
 }

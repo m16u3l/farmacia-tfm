@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
-import { roleCanAccess } from "@/lib/permissions";
+import { roleCanAccess, roleCanAccessApi } from "@/lib/permissions";
 
 const PUBLIC_PATHS = ["/", "/login"];
-const PUBLIC_API_PATHS = ["/api/auth/login"];
+// /api/cron se autentica con CRON_SECRET (bearer token), no con sesión —
+// Vercel Cron lo invoca sin cookie de sesión.
+const PUBLIC_API_PATHS = ["/api/auth/login", "/api/cron"];
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.includes(pathname)) return true;
@@ -31,9 +33,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Restricción por rol en páginas del panel (no en /api, para no romper
-  // llamadas cruzadas legítimas entre secciones que ya filtra la UI).
-  if (!isApi && !roleCanAccess(session.role, pathname)) {
+  if (isApi) {
+    if (!roleCanAccessApi(session.role, pathname)) {
+      return NextResponse.json(
+        { error: "No tiene permiso para acceder a este recurso" },
+        { status: 403 }
+      );
+    }
+    return NextResponse.next();
+  }
+
+  // Restricción por rol en páginas del panel.
+  if (!roleCanAccess(session.role, pathname)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

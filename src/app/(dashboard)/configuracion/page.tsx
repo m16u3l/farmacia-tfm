@@ -13,9 +13,13 @@ import {
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fluidFontSize } from "@/utils/fluidType";
+import { ConfiguracionFormData } from "@/types/configuracion";
 
 export default function ConfiguracionPage() {
-  const [diasCobranza, setDiasCobranza] = useState("");
+  const [form, setForm] = useState<ConfiguracionFormData>({
+    low_stock_threshold: 10,
+    expiry_alert_days: 40,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -30,8 +34,11 @@ export default function ConfiguracionPage() {
     try {
       const response = await fetch("/api/configuracion");
       const data = await response.json();
-      if (data.success) {
-        setDiasCobranza(data.diasRestantes.toString());
+      if (response.ok) {
+        setForm({
+          low_stock_threshold: data.low_stock_threshold,
+          expiry_alert_days: data.expiry_alert_days,
+        });
       }
     } catch (error) {
       console.error("Error al cargar configuración:", error);
@@ -49,13 +56,11 @@ export default function ConfiguracionPage() {
 
     try {
       const response = await fetch("/api/configuracion", {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          diasRestantes: parseInt(diasCobranza),
-        }),
+        body: JSON.stringify(form),
       });
 
       const data = await response.json();
@@ -98,21 +103,39 @@ export default function ConfiguracionPage() {
         <form onSubmit={handleSubmit}>
           <TextField
             fullWidth
-            label="Días para Notificación de Cobranza"
+            label="Umbral de bajo stock"
             type="number"
-            value={diasCobranza}
-            onChange={(e) => setDiasCobranza(e.target.value)}
+            value={form.low_stock_threshold}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, low_stock_threshold: Number(e.target.value) }))
+            }
             required
             disabled={saving}
-            helperText="Número de días antes del vencimiento para enviar notificaciones"
+            helperText="Cantidad disponible igual o menor a esta se considera 'bajo stock' en Validación de Inventario"
             sx={{ mb: 3 }}
+            slotProps={{ htmlInput: { min: 0 } }}
+          />
+
+          <TextField
+            fullWidth
+            label="Días de anticipación para alerta de vencimiento"
+            type="number"
+            value={form.expiry_alert_days}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, expiry_alert_days: Number(e.target.value) }))
+            }
+            required
+            disabled={saving}
+            helperText="Lotes que vencen dentro de estos días se consideran 'próximos a vencer'"
+            sx={{ mb: 3 }}
+            slotProps={{ htmlInput: { min: 0 } }}
           />
 
           <Button
             type="submit"
             variant="contained"
             disabled={saving}
-            sx={{ 
+            sx={{
               mt: 2,
               fontSize: fluidFontSize(0.75, 0.875),
               width: { xs: '100%', sm: 'auto' }

@@ -233,12 +233,15 @@ CREATE INDEX IF NOT EXISTS idx_cash_register_closures_user_id ON cash_register_c
 CREATE INDEX IF NOT EXISTS idx_cash_register_closures_status ON cash_register_closures(status);
 
 -- -----------------------------------------------------------------------------
--- 9. configuracion — parámetros generales del sistema (vista /configuracion)
+-- 9. configuracion — parámetros operativos del sistema (vista /configuracion).
+--    Fila única (id = 1): umbral de bajo stock y días de anticipación para
+--    alertar vencimientos, usados por inventory-validations y /api/cron.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS configuracion (
-  id                          SERIAL PRIMARY KEY,
-  dias_notificacion_cobranza  INTEGER NOT NULL DEFAULT 5,
-  updated_at                  TIMESTAMP NOT NULL DEFAULT NOW()
+  id                    SERIAL PRIMARY KEY,
+  low_stock_threshold   INTEGER NOT NULL DEFAULT 10 CHECK (low_stock_threshold >= 0),
+  expiry_alert_days     INTEGER NOT NULL DEFAULT 40 CHECK (expiry_alert_days >= 0),
+  updated_at            TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- -----------------------------------------------------------------------------
@@ -352,7 +355,7 @@ COMMIT;
 -- =============================================================================
 BEGIN;
 
-INSERT INTO configuracion (dias_notificacion_cobranza) VALUES (5)
+INSERT INTO configuracion (low_stock_threshold, expiry_alert_days) VALUES (10, 40)
 ON CONFLICT DO NOTHING;
 
 -- -----------------------------------------------------------------------------
