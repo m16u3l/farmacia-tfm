@@ -46,3 +46,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# dumps de db/scripts/backup.sh (pueden contener datos reales)
+/db/backups/

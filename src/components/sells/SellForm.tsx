@@ -10,12 +10,46 @@ import {
   Box,
   Typography,
   Autocomplete,
+  createFilterOptions,
   Grid,
+  Alert,
 } from "@mui/material";
 import { SellFormData, SellItem, PaymentMethod, PAYMENT_METHOD_LABELS, Inventory } from "@/types";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+
+// Normaliza para comparar nombres sin distinguir may/min ni acentos
+const normalizeName = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+// Distancia de edición simple, usada para detectar nombres parecidos (LASA:
+// look-alike/sound-alike) que pueden confundirse en el mostrador.
+const levenshtein = (a: string, b: string) => {
+  const dp: number[][] = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] =
+        a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
+};
+
+const filterInventoryOptions = createFilterOptions<Inventory>({
+  stringify: (option) =>
+    [option.product_name, option.product_barcode, option.product_active_ingredient, option.product_laboratory]
+      .filter(Boolean)
+      .join(" "),
+});
 
 interface SellFormProps {
   open: boolean;
@@ -93,6 +127,28 @@ export function SellForm({
     onChange("items", items);
   };
 
+  // Otros productos con nombre parecido al seleccionado (posible confusión LASA)
+  const similarNameWarnings = useMemo(() => {
+    if (!selectedInventory?.product_name) return [];
+    const selectedName = normalizeName(selectedInventory.product_name);
+    const seen = new Set<string>();
+    return inventory.filter((item) => {
+      if (
+        item.inventory_id === selectedInventory.inventory_id ||
+        item.product_id === selectedInventory.product_id ||
+        !item.product_name
+      ) {
+        return false;
+      }
+      const name = normalizeName(item.product_name);
+      if (seen.has(name)) return false;
+      const distance = levenshtein(selectedName, name);
+      const isSimilar = name !== selectedName && distance > 0 && distance <= 2;
+      if (isSimilar) seen.add(name);
+      return isSimilar;
+    });
+  }, [selectedInventory, inventory]);
+
   const PAYMENT_METHODS: PaymentMethod[] = ["efectivo", "qr_transferencia"];
 
   return (
@@ -138,13 +194,28 @@ export function SellForm({
                 mb: 1,
               }}
             >
-              <TextField
-                label="Producto"
-                value={item.inventory?.product_name || `ID: ${item.inventory_id}`}
-                disabled
-                size="small"
-                sx={{ flex: "2 1 160px" }}
-              />
+              <Box sx={{ flex: "2 1 160px" }}>
+                <TextField
+                  label="Producto"
+                  value={item.inventory?.product_name || `ID: ${item.inventory_id}`}
+                  disabled
+                  size="small"
+                  fullWidth
+                />
+                {(item.inventory?.product_laboratory ||
+                  item.inventory?.product_active_ingredient ||
+                  item.inventory?.product_concentration) && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                    {[
+                      item.inventory?.product_laboratory,
+                      item.inventory?.product_active_ingredient,
+                      item.inventory?.product_concentration,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Typography>
+                )}
+              </Box>
               <TextField
                 label="Cantidad"
                 type="number"
@@ -182,8 +253,26 @@ export function SellForm({
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", mt: 2 }}>
             <Autocomplete
               options={inventory}
-              getOptionLabel={(option) => `${option.product_name || 'Producto'} - Stock: ${option.quantity_available}`}
+              filterOptions={filterInventoryOptions}
+              getOptionLabel={(option) =>
+                [option.product_name || "Producto", option.product_laboratory, option.product_concentration]
+                  .filter(Boolean)
+                  .join(" - ")
+              }
               getOptionKey={(option) => option.inventory_id}
+              renderOption={(props, option) => (
+                <Box component="li" {...props} key={option.inventory_id}>
+                  <Box>
+                    <Typography variant="body2">{option.product_name || "Producto"}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {[option.product_laboratory, option.product_active_ingredient, option.product_concentration]
+                        .filter(Boolean)
+                        .join(" · ") || "Sin datos de laboratorio/principio activo"}
+                      {` — Stock: ${option.quantity_available}`}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
               value={selectedInventory}
               onChange={(_, newValue) => {
                 setSelectedInventory(newValue);
@@ -196,7 +285,7 @@ export function SellForm({
                 }
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Producto" size="small" />
+                <TextField {...params} label="Producto (nombre, código de barras o principio activo)" size="small" />
               )}
               sx={{ flex: "2 1 200px" }}
             />
@@ -242,6 +331,37 @@ export function SellForm({
               <AddIcon />
             </IconButton>
           </Box>
+
+          {selectedInventory && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Confirmar:{" "}
+                {[
+                  selectedInventory.product_laboratory && `Laboratorio: ${selectedInventory.product_laboratory}`,
+                  selectedInventory.product_active_ingredient &&
+                    `Principio activo: ${selectedInventory.product_active_ingredient}`,
+                  selectedInventory.product_concentration &&
+                    `Concentración: ${selectedInventory.product_concentration}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "Este producto no tiene laboratorio/principio activo/concentración registrados"}
+              </Typography>
+            </Box>
+          )}
+
+          {similarNameWarnings.length > 0 && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              Cuidado: existen productos con nombre parecido que podrían confundirse —{" "}
+              {similarNameWarnings
+                .map((item) =>
+                  [item.product_name, item.product_laboratory, item.product_concentration]
+                    .filter(Boolean)
+                    .join(" ")
+                )
+                .join(", ")}
+              . Verifique que seleccionó el producto correcto antes de agregarlo.
+            </Alert>
+          )}
 
           <TextField
             label="Total"

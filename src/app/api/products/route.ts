@@ -73,6 +73,10 @@ export async function POST(request: NextRequest) {
       description,
       possible_uses,
       additional_info,
+      laboratory,
+      active_ingredient,
+      concentration,
+      health_registry,
       category,
       type,
       dosage_form,
@@ -85,9 +89,9 @@ export async function POST(request: NextRequest) {
     try {
       const session = await getSessionFromRequest(request);
       const result = await client.query(
-        `INSERT INTO products (name, description, possible_uses, additional_info, category, type, dosage_form, unit, dosage_instructions, barcode, status, created_by)
-				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-        [name, description, possible_uses ?? null, additional_info ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, status, session?.userId ?? null]
+        `INSERT INTO products (name, description, possible_uses, additional_info, laboratory, active_ingredient, concentration, health_registry, category, type, dosage_form, unit, dosage_instructions, barcode, status, created_by)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, status, session?.userId ?? null]
       );
       await logAudit(session?.userId ?? null, "create", "product", result.rows[0].product_id, { name });
       return NextResponse.json(result.rows[0]);

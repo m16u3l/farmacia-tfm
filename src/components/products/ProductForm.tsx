@@ -95,6 +95,45 @@ export function ProductForm({
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
+                label="Laboratorio"
+                fullWidth
+                placeholder="Ej. Bagó, Roche, Inti"
+                helperText="Fabricante — distingue marcas iguales de distinto laboratorio"
+                value={formData.laboratory ?? ""}
+                onChange={(e) => onChange("laboratory", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Principio activo"
+                fullWidth
+                placeholder="Ej. Paracetamol"
+                helperText="Nombre genérico, independiente de la marca comercial"
+                value={formData.active_ingredient ?? ""}
+                onChange={(e) => onChange("active_ingredient", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Concentración"
+                fullWidth
+                placeholder="Ej. 500mg"
+                helperText="Dosis del principio activo por unidad"
+                value={formData.concentration ?? ""}
+                onChange={(e) => onChange("concentration", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Registro sanitario"
+                fullWidth
+                placeholder="Ej. código Ministerio de Salud/SEDES"
+                value={formData.health_registry ?? ""}
+                onChange={(e) => onChange("health_registry", e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
                 select
                 label="Categoría"
                 fullWidth

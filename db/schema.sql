@@ -51,6 +51,14 @@ CREATE TABLE IF NOT EXISTS products (
   possible_uses         TEXT,
   -- Precauciones, contraindicaciones u otra información relevante
   additional_info       TEXT,
+  -- Laboratorio/fabricante (distingue el mismo nombre comercial de varios fabricantes)
+  laboratory            VARCHAR(100),
+  -- Principio activo / nombre genérico (independiente del nombre comercial)
+  active_ingredient     VARCHAR(150),
+  -- Concentración/dosis del principio activo (ej. "500mg", "850mg")
+  concentration         VARCHAR(50),
+  -- Código de registro sanitario (Ministerio de Salud/SEDES), para trazabilidad regulatoria
+  health_registry       VARCHAR(50),
   -- category: analgésicos | antibióticos | antiinflamatorios | antipiréticos |
   --           cardiovasculares | dermatológicos | gastrointestinales |
   --           respiratorios | vitaminas | otros  (nulo = pendiente de clasificar)

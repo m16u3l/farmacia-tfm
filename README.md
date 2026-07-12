@@ -105,6 +105,18 @@ psql "$DB_CONNECTION" -f db/seed_data_inventario.sql   # opcional, datos reales 
 
 ### Actualizar una base existente (Supabase producción)
 
+**Opción rápida — scripts (no requieren `psql` instalado, solo Docker):**
+
+```bash
+db/scripts/backup.sh "$DB_CONNECTION"     # respaldo completo antes de tocar nada (recomendado)
+db/scripts/migrate.sh "$DB_CONNECTION"    # corre TODAS las migraciones pendientes, en orden
+db/scripts/migrate.sh "$DB_CONNECTION" 004  # o una sola migración puntual (por su prefijo numérico)
+```
+
+Ambos scripts usan un contenedor `postgres:17-alpine` como cliente en vez del `psql`/`pg_dump` local — Supabase corre Postgres 17 y `pg_dump` exige versión de cliente >= servidor, así que un `pg_dump`/`psql` local más viejo (o inexistente) no es un problema.
+
+**Opción manual:**
+
 1. Apunta `DB_CONNECTION` a Supabase (cadena de conexión del pooler — `src/config/db.js` activa SSL automáticamente para cualquier host que no sea `localhost`/`127.0.0.1`/`::1`).
 2. Corre las migraciones **en orden**, revisando primero el encabezado de cada archivo (explica qué hace y, si es un paso destructivo, qué verificar antes):
    ```bash
@@ -117,6 +129,8 @@ psql "$DB_CONNECTION" -f db/seed_data_inventario.sql   # opcional, datos reales 
    psql "$DB_CONNECTION" -f db/migrations/008_inventory_validations_adjustments.sql
    psql "$DB_CONNECTION" -f db/migrations/009_products_professional_descriptions.sql
    psql "$DB_CONNECTION" -f db/migrations/010_inventory_validation_items_expiry_date.sql
+   psql "$DB_CONNECTION" -f db/migrations/011_cash_register_closures.sql
+   psql "$DB_CONNECTION" -f db/migrations/012_configuracion_operational_params.sql
    ```
 3. Antes de correr una migración, **verifica manualmente si ya la corriste antes** (no hay tabla de control) — por ejemplo con `\d nombre_tabla` en `psql` para ver si la columna/tabla ya existe. Correr una migración dos veces puede fallar o duplicar datos según el archivo.
 
@@ -127,7 +141,7 @@ Migraciones de tipo **expand/contract** (dos pasos — no corras el segundo sin 
 | `003_sells_payment_method_expand.sql` | `004_sells_simplify.sql` — quita `customer_name`/`employee_id`, cierra el CHECK de `payment_method` |
 | `005_inventory_areas_and_validations_expand.sql` | `006_inventory_location_drop.sql` — elimina `inventory.location` |
 
-Resto de migraciones (`002`, `007`, `008`, `009`, `010`) son de un solo paso, aditivas.
+Resto de migraciones (`002`, `007`, `008`, `009`, `010`, `011`, `012`) son de un solo paso, aditivas.
 
 **Al crear una migración nueva:** revisa `db/migrations/` para ver cuál es el próximo número libre — no asumas que es secuencial solo por lo último que recuerdes, puede haber migraciones de trabajo paralelo (ya pasó: la 009 quedó tomada por otro cambio y una migración tuvo que numerarse 010).
 

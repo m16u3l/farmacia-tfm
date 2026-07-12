@@ -14,6 +14,10 @@ export interface Inventory {
   product_name?: string;  // For joined queries
   product_description?: string;  // For joined queries
   product_category?: string;  // For joined queries
+  product_laboratory?: string | null;  // For joined queries
+  product_active_ingredient?: string | null;  // For joined queries
+  product_concentration?: string | null;  // For joined queries
+  product_barcode?: string | null;  // For joined queries
   area_name?: string;  // For joined queries
 }
 

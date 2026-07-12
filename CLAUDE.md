@@ -54,7 +54,7 @@ Required env vars: `DB_CONNECTION` (Postgres connection string; SSL is auto-disa
 - `src/config/db.js` exports a single shared `pg` `Pool` (`pool`), configured from `DB_CONNECTION`.
 - API route handlers call `pool.connect()`, run parameterized queries directly (no ORM/query builder), and always `client.release()` in a `finally` block.
 - Mutations that create/update/delete typically call `logAudit(userId, action, entityType, entityId, details)` from `src/lib/audit.ts` afterward, writing to the `audit_log` table. Audit logging never throws — a failure there must not break the underlying operation.
-- Schema source of truth is `db/schema.sql` (tables: `users`, `products`, `suppliers`, `inventory`, `employees`, `orders`/`order_items`, `sells`/`sell_items`, `configuracion`, `audit_log`). Incremental changes go in `db/migrations/`.
+- Schema source of truth is `db/schema.sql` (tables: `users`, `products`, `suppliers`, `inventory`, `inventory_areas`, `inventory_movements`, `employees`, `orders`/`order_items`, `sells`/`sell_items`, `cash_register_closures`, `configuracion`, `audit_log`, `inventory_validations`/`inventory_validation_items`). Incremental changes go in `db/migrations/`.
 - `db/etl/build_seed.py` regenerates `db/seed_data_inventario.sql` from the source Excel inventory file (requires `pandas`, `openpyxl`); `db/etl_review_report.csv` documents row-level decisions made during that import.
 
 ### Frontend data flow

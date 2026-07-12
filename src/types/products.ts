@@ -4,6 +4,10 @@ export interface Product {
   description?: string | null;
   possible_uses?: string | null;
   additional_info?: string | null;
+  laboratory?: string | null;
+  active_ingredient?: string | null;
+  concentration?: string | null;
+  health_registry?: string | null;
   category?: string | null;
   type?: string | null;
   dosage_form?: string | null;

@@ -36,6 +36,10 @@ export async function PUT(
       description,
       possible_uses,
       additional_info,
+      laboratory,
+      active_ingredient,
+      concentration,
+      health_registry,
       category,
       type,
       dosage_form,
@@ -48,10 +52,11 @@ export async function PUT(
     try {
       await client.query(
         `UPDATE products
-         SET name = $1, description = $2, possible_uses = $3, additional_info = $4, category = $5, type = $6,
-             dosage_form = $7, unit = $8, dosage_instructions = $9, barcode = $10, status = $11
-         WHERE product_id = $12`,
-        [name, description, possible_uses ?? null, additional_info ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, status, params.id]
+         SET name = $1, description = $2, possible_uses = $3, additional_info = $4, laboratory = $5, active_ingredient = $6,
+             concentration = $7, health_registry = $8, category = $9, type = $10,
+             dosage_form = $11, unit = $12, dosage_instructions = $13, barcode = $14, status = $15
+         WHERE product_id = $16`,
+        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, status, params.id]
       );
       const session = await getSessionFromRequest(request);
       await logAudit(session?.userId ?? null, "update", "product", Number(params.id), { name });

@@ -39,6 +39,10 @@ export default function ProductsPage() {
     description: "",
     possible_uses: "",
     additional_info: "",
+    laboratory: "",
+    active_ingredient: "",
+    concentration: "",
+    health_registry: "",
     category: "",
     type: "",
     dosage_form: "",
@@ -84,6 +88,10 @@ export default function ProductsPage() {
       description: product.description ?? "",
       possible_uses: product.possible_uses ?? "",
       additional_info: product.additional_info ?? "",
+      laboratory: product.laboratory ?? "",
+      active_ingredient: product.active_ingredient ?? "",
+      concentration: product.concentration ?? "",
+      health_registry: product.health_registry ?? "",
       category: product.category ?? "",
       type: product.type ?? "",
       dosage_form: product.dosage_form ?? "",
@@ -156,6 +164,10 @@ export default function ProductsPage() {
       description: "",
       possible_uses: "",
       additional_info: "",
+      laboratory: "",
+      active_ingredient: "",
+      concentration: "",
+      health_registry: "",
       category: "",
       type: "",
       dosage_form: "",
@@ -172,6 +184,9 @@ export default function ProductsPage() {
   const columns: GridColDef[] = [
     { field: "product_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
     { field: "name", headerName: "Nombre", flex: 2, minWidth: 150 },
+    { field: "laboratory", headerName: "Laboratorio", flex: 1.5, minWidth: 120 },
+    { field: "active_ingredient", headerName: "Principio activo", flex: 1.5, minWidth: 130 },
+    { field: "concentration", headerName: "Concentración", flex: 1, minWidth: 100 },
     { field: "description", headerName: "Descripción", flex: 2.5, minWidth: 180 },
     { field: "category", headerName: "Categoría", flex: 1.5, minWidth: 120 },
     { field: "type", headerName: "Tipo", flex: 1, minWidth: 100 },
@@ -304,6 +319,40 @@ export default function ProductsPage() {
         <DialogTitle>{detailProduct?.name}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Laboratorio
+                </Typography>
+                <Typography variant="body2">
+                  {detailProduct?.laboratory || "No especificado"}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Principio activo
+                </Typography>
+                <Typography variant="body2">
+                  {detailProduct?.active_ingredient || "No especificado"}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Concentración
+                </Typography>
+                <Typography variant="body2">
+                  {detailProduct?.concentration || "No especificada"}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Registro sanitario
+                </Typography>
+                <Typography variant="body2">
+                  {detailProduct?.health_registry || "No especificado"}
+                </Typography>
+              </Box>
+            </Box>
             <Box>
               <Typography variant="subtitle2" color="text.secondary">
                 Descripción

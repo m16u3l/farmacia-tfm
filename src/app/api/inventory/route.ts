@@ -23,6 +23,10 @@ export async function GET() {
           p.name as product_name,
           p.description as product_description,
           p.category as product_category,
+          p.laboratory as product_laboratory,
+          p.active_ingredient as product_active_ingredient,
+          p.concentration as product_concentration,
+          p.barcode as product_barcode,
           a.name as area_name
         FROM inventory i
         LEFT JOIN products p ON i.product_id = p.product_id
