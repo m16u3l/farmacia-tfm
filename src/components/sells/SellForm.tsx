@@ -108,6 +108,12 @@ export function SellForm({
     }
   }, [open]);
 
+  // Ruta completa del área ("Sucursal X › Almacén Y › Estante Z"), calculada
+  // por el API vía CTE recursivo, para que en el mostrador se vea dónde
+  // ubicar físicamente el producto.
+  const getAreaLocation = (option: Inventory) =>
+    option.area_full_path || option.area_name || "Sin ubicación";
+
   // Limpia el estado local de la venta anterior cada vez que se abre el diálogo.
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -322,7 +328,7 @@ export function SellForm({
                           {outOfStock ? "Sin stock" : `Stock: ${option.quantity_available}`}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          · {option.area_name || "Sin ubicación"}
+                          · {getAreaLocation(option)}
                         </Typography>
                       </Box>
                     </Box>
@@ -381,7 +387,7 @@ export function SellForm({
                   `Concentración: ${selectedInventory.product_concentration}`,
               ]
                 .filter(Boolean)
-                .join(" · ") || "Este producto no tiene laboratorio/principio activo/concentración registrados"}
+                .join(" · ") || "Laboratorio N/A"}
             </Typography>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 0.5 }}>
               <Typography
@@ -396,7 +402,7 @@ export function SellForm({
                   : `Stock disponible: ${selectedInventory.quantity_available}`}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Ubicación: {selectedInventory.area_name || "Sin ubicación asignada"}
+                Ubicación: {getAreaLocation(selectedInventory)}
               </Typography>
             </Box>
           </Box>

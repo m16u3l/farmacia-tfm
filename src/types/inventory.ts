@@ -20,6 +20,7 @@ export interface Inventory {
   product_barcode?: string | null;  // For joined queries
   product_sale_control?: SaleControl | null;  // For joined queries
   area_name?: string;  // For joined queries
+  area_full_path?: string;  // For joined queries — "Padre › Hijo › Nieto"
 }
 
 export type InventoryFormData = Omit<Inventory, 'inventory_id' | 'product'>;

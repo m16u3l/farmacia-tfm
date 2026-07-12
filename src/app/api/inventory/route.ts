@@ -13,6 +13,15 @@ export async function GET() {
     const client = await pool.connect();
     try {
       const result = await client.query(`
+        WITH RECURSIVE area_path AS (
+          SELECT area_id, name::text AS full_path
+          FROM inventory_areas
+          WHERE parent_area_id IS NULL
+          UNION ALL
+          SELECT a.area_id, ap.full_path || ' › ' || a.name
+          FROM inventory_areas a
+          JOIN area_path ap ON a.parent_area_id = ap.area_id
+        )
         SELECT
           i.*,
           p.name as product_name,
@@ -23,10 +32,12 @@ export async function GET() {
           p.concentration as product_concentration,
           p.barcode as product_barcode,
           p.sale_control as product_sale_control,
-          a.name as area_name
+          a.name as area_name,
+          ap.full_path as area_full_path
         FROM inventory i
         LEFT JOIN products p ON i.product_id = p.product_id
         LEFT JOIN inventory_areas a ON i.area_id = a.area_id
+        LEFT JOIN area_path ap ON i.area_id = ap.area_id
         ORDER BY i.inventory_id DESC
       `);
       if (!result.rows) {
