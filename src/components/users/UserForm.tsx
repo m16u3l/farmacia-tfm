@@ -12,21 +12,24 @@ import {
   Grid,
 } from "@mui/material";
 import { UserFormData, UserRole } from "@/types/user";
+import { Employee } from "@/types/employee";
 import { ROLE_LABELS } from "@/lib/permissions";
 
 interface UsuarioFormProps {
   open: boolean;
   isEditing: boolean;
   formData: UserFormData;
+  employees: Employee[];
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => Promise<void>;
-  onChange: (field: keyof UserFormData, value: string | boolean) => void;
+  onChange: (field: keyof UserFormData, value: string | boolean | number | null) => void;
 }
 
 export function UserForm({
   open,
   isEditing,
   formData,
+  employees,
   onClose,
   onSubmit,
   onChange,
@@ -80,6 +83,25 @@ export function UserForm({
                 {(Object.keys(ROLE_LABELS) as UserRole[]).map((role) => (
                   <MenuItem key={role} value={role}>
                     {ROLE_LABELS[role]}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label="Empleado vinculado (opcional)"
+                value={formData.employee_id ?? ""}
+                onChange={(e) =>
+                  onChange("employee_id", e.target.value === "" ? null : Number(e.target.value))
+                }
+                helperText="Une esta cuenta de acceso a su ficha de RR.HH. en Empleados. No es obligatorio: puede haber cuentas sin ficha (p. ej. un admin externo) o empleados sin cuenta (aún no tienen acceso al sistema)."
+              >
+                <MenuItem value="">Sin vincular</MenuItem>
+                {employees.map((employee) => (
+                  <MenuItem key={employee.employee_id} value={employee.employee_id}>
+                    {employee.first_name} {employee.last_name}
                   </MenuItem>
                 ))}
               </TextField>

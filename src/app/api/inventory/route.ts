@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { corsHeaders } from "@/lib/cors";
 
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
@@ -27,6 +22,7 @@ export async function GET() {
           p.active_ingredient as product_active_ingredient,
           p.concentration as product_concentration,
           p.barcode as product_barcode,
+          p.sale_control as product_sale_control,
           a.name as area_name
         FROM inventory i
         LEFT JOIN products p ON i.product_id = p.product_id

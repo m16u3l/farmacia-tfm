@@ -39,7 +39,7 @@ Required env vars: `DB_CONNECTION` (Postgres connection string; SSL is auto-disa
 ## Architecture
 
 ### Routing and pages
-- App Router under `src/app/`. Authenticated panel pages live in the `(dashboard)` route group: `src/app/(dashboard)/[domain]/page.tsx` for `products`, `inventory`, `sells`, `orders`, `suppliers`, `employees`, `users`, `validations`, `configuracion`, `dashboard`.
+- App Router under `src/app/`. Authenticated panel pages live in the `(dashboard)` route group: `src/app/(dashboard)/[domain]/page.tsx` for `products`, `inventory`, `areas`, `inventory-validations`, `sells`, `cash-register-closures`, `orders`, `suppliers`, `employees`, `users`, `reports` (sales report, not to be confused with `inventory-validations`), `configuracion`, `dashboard`.
 - Public routes: `/` and `/login` (see `PUBLIC_PATHS` in `src/middleware.ts`).
 - API routes mirror the domain structure under `src/app/api/[domain]/route.ts` (+ `[id]/route.ts` for item-level GET/PUT/DELETE).
 

@@ -21,6 +21,7 @@ export interface ValidationExportItem {
   expected_quantity: number;
   actual_quantity: number | null;
   status: string;
+  discrepancy_reason: string | null;
   notes: string | null;
   verified_by_name: string | null;
   verified_at: string | null;
@@ -52,7 +53,7 @@ export async function fetchValidationForExport(
     `SELECT
       vi.validation_item_id, p.name as product_name, i.batch_number, i.expiry_date,
       vi.actual_expiry_date,
-      vi.expected_quantity, vi.actual_quantity, vi.status, vi.notes,
+      vi.expected_quantity, vi.actual_quantity, vi.status, vi.discrepancy_reason, vi.notes,
       (u.first_name || ' ' || u.last_name) as verified_by_name,
       vi.verified_at
     FROM inventory_validation_items vi

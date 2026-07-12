@@ -8,17 +8,23 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  MenuItem,
   TextField,
   Typography,
 } from "@mui/material";
 import VerifiedIcon from "@mui/icons-material/Verified";
-import { InventoryValidationItem } from "@/types";
+import { InventoryValidationItem, DiscrepancyReason, DISCREPANCY_REASONS, DISCREPANCY_REASON_LABELS } from "@/types";
 
 interface VerifyItemDialogProps {
   open: boolean;
   item: InventoryValidationItem | null;
   onClose: () => void;
-  onSubmit: (data: { actual_quantity: number; actual_expiry_date: string | null; notes: string }) => void;
+  onSubmit: (data: {
+    actual_quantity: number;
+    actual_expiry_date: string | null;
+    notes: string;
+    discrepancy_reason: DiscrepancyReason | null;
+  }) => void;
 }
 
 const QUANTITY_PATTERN = /^\d+$/;
@@ -41,6 +47,7 @@ export function VerifyItemDialog({ open, item, onClose, onSubmit }: VerifyItemDi
   const [quantityInput, setQuantityInput] = useState("");
   const [expiryInput, setExpiryInput] = useState("");
   const [notes, setNotes] = useState("");
+  const [discrepancyReason, setDiscrepancyReason] = useState<DiscrepancyReason | "">("");
 
   // Cada vez que se abre para un ítem nuevo, sembrar el borrador con el valor
   // previamente registrado (o la cantidad/fecha esperada si aún no se verificó).
@@ -49,6 +56,7 @@ export function VerifyItemDialog({ open, item, onClose, onSubmit }: VerifyItemDi
       setQuantityInput(String(item.actual_quantity ?? item.expected_quantity));
       setExpiryInput(toDateInputValue(item.actual_expiry_date ?? item.expiry_date));
       setNotes(item.notes || "");
+      setDiscrepancyReason(item.discrepancy_reason || "");
     }
   }, [item]);
 
@@ -62,10 +70,16 @@ export function VerifyItemDialog({ open, item, onClose, onSubmit }: VerifyItemDi
   const isInvalid = trimmed.length > 0 && parsedQuantity === null;
   const systemExpiry = toDateInputValue(item.expiry_date);
   const expiryChanged = expiryInput !== "" && expiryInput !== systemExpiry;
+  const hasDiscrepancy = parsedQuantity !== null && parsedQuantity !== item.expected_quantity;
 
   const handleSubmit = () => {
     if (parsedQuantity === null) return;
-    onSubmit({ actual_quantity: parsedQuantity, actual_expiry_date: expiryInput || null, notes });
+    onSubmit({
+      actual_quantity: parsedQuantity,
+      actual_expiry_date: expiryInput || null,
+      notes,
+      discrepancy_reason: hasDiscrepancy && discrepancyReason ? discrepancyReason : null,
+    });
   };
 
   return (
@@ -99,11 +113,28 @@ export function VerifyItemDialog({ open, item, onClose, onSubmit }: VerifyItemDi
             }
           />
 
-          {parsedQuantity !== null && parsedQuantity !== item.expected_quantity && (
-            <Alert severity={parsedQuantity < item.expected_quantity ? "warning" : "info"} sx={{ mt: 2 }}>
-              Diferencia: {parsedQuantity - item.expected_quantity} unidades
-              {parsedQuantity < item.expected_quantity ? " (Faltante)" : " (Sobrante)"}
-            </Alert>
+          {hasDiscrepancy && (
+            <>
+              <Alert severity={parsedQuantity! < item.expected_quantity ? "warning" : "info"} sx={{ mt: 2 }}>
+                Diferencia: {parsedQuantity! - item.expected_quantity} unidades
+                {parsedQuantity! < item.expected_quantity ? " (Faltante)" : " (Sobrante)"}
+              </Alert>
+              <TextField
+                select
+                fullWidth
+                label="Motivo de la diferencia"
+                value={discrepancyReason}
+                onChange={(e) => setDiscrepancyReason(e.target.value as DiscrepancyReason)}
+                margin="normal"
+                helperText="Ayuda a auditar por causa (vencido, dañado, merma, error de conteo)"
+              >
+                {DISCREPANCY_REASONS.map((reason) => (
+                  <MenuItem key={reason} value={reason}>
+                    {DISCREPANCY_REASON_LABELS[reason]}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </>
           )}
 
           <TextField

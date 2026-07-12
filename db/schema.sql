@@ -73,6 +73,10 @@ CREATE TABLE IF NOT EXISTS products (
   -- Instrucción de dosificación libre (ej. "cada 12 horas, adultos")
   dosage_instructions   TEXT,
   barcode               VARCHAR(50) UNIQUE,
+  -- sale_control: libre (venta libre) | receta (requiere receta médica) |
+  --               controlado (control especial — antibióticos, psicotrópicos)
+  sale_control          VARCHAR(20) NOT NULL DEFAULT 'libre'
+                        CHECK (sale_control IN ('libre', 'receta', 'controlado')),
   status                BOOLEAN NOT NULL DEFAULT TRUE,
   created_by            INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at            TIMESTAMP NOT NULL DEFAULT NOW()
@@ -347,6 +351,10 @@ CREATE TABLE IF NOT EXISTS inventory_validation_items (
   actual_expiry_date   DATE,
   status               VARCHAR(20) NOT NULL DEFAULT 'pending'
                        CHECK (status IN ('pending', 'confirmed', 'inconsistent', 'not_found')),
+  -- Motivo estructurado de la discrepancia (cuando status es inconsistent/not_found).
+  -- "notes" queda para detalle adicional en texto libre.
+  discrepancy_reason   VARCHAR(20)
+                       CHECK (discrepancy_reason IN ('vencido', 'dañado', 'merma', 'error_conteo', 'otro')),
   notes                TEXT,
   verified_by          INTEGER REFERENCES users(id) ON DELETE SET NULL,
   verified_at          TIMESTAMP

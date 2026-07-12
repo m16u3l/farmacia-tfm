@@ -25,6 +25,7 @@ import {
   InventoryValidationWithItems,
   ValidationStatus,
   ValidationType,
+  DISCREPANCY_REASON_LABELS,
 } from "@/types";
 import { useValidations } from "@/hooks/useValidations";
 import { buildAreaOptions } from "@/utils/areaTree";
@@ -256,6 +257,7 @@ export function HistoryTab({ areas, onNotify }: HistoryTabProps) {
                     <TableCell>Cant. Real</TableCell>
                     <TableCell>Vencimiento</TableCell>
                     <TableCell>Estado</TableCell>
+                    <TableCell>Motivo</TableCell>
                     <TableCell>Notas</TableCell>
                   </TableRow>
                 </TableHead>
@@ -284,6 +286,9 @@ export function HistoryTab({ areas, onNotify }: HistoryTabProps) {
                             color={VALIDATION_ITEM_STATUS_LABELS[item.status].color}
                             size="small"
                           />
+                        </TableCell>
+                        <TableCell>
+                          {item.discrepancy_reason ? DISCREPANCY_REASON_LABELS[item.discrepancy_reason] : "—"}
                         </TableCell>
                         <TableCell>{item.notes || "—"}</TableCell>
                       </TableRow>

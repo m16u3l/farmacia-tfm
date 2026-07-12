@@ -13,8 +13,10 @@ import {
   createFilterOptions,
   Grid,
   Alert,
+  Chip,
 } from "@mui/material";
 import { SellFormData, SellItem, PaymentMethod, PAYMENT_METHOD_LABELS, Inventory } from "@/types";
+import { SALE_CONTROL_LABELS } from "@/types/products";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import { useState, useEffect, useMemo } from "react";
@@ -127,6 +129,50 @@ export function SellForm({
     onChange("items", items);
   };
 
+  // FEFO (first-expired, first-out): dentro de un mismo producto, ordena los
+  // lotes por vencimiento más próximo primero — sugerencia, no bloqueo.
+  const sortedInventory = useMemo(() => {
+    return [...inventory].sort((a, b) => {
+      const nameCompare = (a.product_name || "").localeCompare(b.product_name || "");
+      if (nameCompare !== 0) return nameCompare;
+      if (!a.expiry_date && !b.expiry_date) return 0;
+      if (!a.expiry_date) return 1;
+      if (!b.expiry_date) return -1;
+      return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
+    });
+  }, [inventory]);
+
+  // Lote con vencimiento más próximo por producto (entre los que tienen fecha).
+  const earliestExpiryByProduct = useMemo(() => {
+    const map = new Map<number, Inventory>();
+    for (const item of inventory) {
+      if (!item.expiry_date) continue;
+      const current = map.get(item.product_id);
+      if (!current || new Date(item.expiry_date).getTime() < new Date(current.expiry_date!).getTime()) {
+        map.set(item.product_id, item);
+      }
+    }
+    return map;
+  }, [inventory]);
+
+  const lotCountByProduct = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const item of inventory) {
+      counts.set(item.product_id, (counts.get(item.product_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [inventory]);
+
+  const isFefoRecommended = (option: Inventory) =>
+    (lotCountByProduct.get(option.product_id) ?? 0) > 1 &&
+    earliestExpiryByProduct.get(option.product_id)?.inventory_id === option.inventory_id;
+
+  const earlierLotForSelected =
+    selectedInventory &&
+    earliestExpiryByProduct.get(selectedInventory.product_id)?.inventory_id !== selectedInventory.inventory_id
+      ? earliestExpiryByProduct.get(selectedInventory.product_id)
+      : null;
+
   // Otros productos con nombre parecido al seleccionado (posible confusión LASA)
   const similarNameWarnings = useMemo(() => {
     if (!selectedInventory?.product_name) return [];
@@ -215,6 +261,14 @@ export function SellForm({
                       .join(" · ")}
                   </Typography>
                 )}
+                {item.inventory?.product_sale_control && item.inventory.product_sale_control !== "libre" && (
+                  <Chip
+                    size="small"
+                    label={SALE_CONTROL_LABELS[item.inventory.product_sale_control]}
+                    color={item.inventory.product_sale_control === "controlado" ? "error" : "warning"}
+                    sx={{ mt: 0.5 }}
+                  />
+                )}
               </Box>
               <TextField
                 label="Cantidad"
@@ -252,7 +306,7 @@ export function SellForm({
 
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center", mt: 2 }}>
             <Autocomplete
-              options={inventory}
+              options={sortedInventory}
               filterOptions={filterInventoryOptions}
               getOptionLabel={(option) =>
                 [option.product_name || "Producto", option.product_laboratory, option.product_concentration]
@@ -262,14 +316,27 @@ export function SellForm({
               getOptionKey={(option) => option.inventory_id}
               renderOption={(props, option) => (
                 <Box component="li" {...props} key={option.inventory_id}>
-                  <Box>
-                    <Typography variant="body2">{option.product_name || "Producto"}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {[option.product_laboratory, option.product_active_ingredient, option.product_concentration]
-                        .filter(Boolean)
-                        .join(" · ") || "Sin datos de laboratorio/principio activo"}
-                      {` — Stock: ${option.quantity_available}`}
-                    </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2">{option.product_name || "Producto"}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {[option.product_laboratory, option.product_active_ingredient, option.product_concentration]
+                          .filter(Boolean)
+                          .join(" · ") || "Sin datos de laboratorio/principio activo"}
+                        {` — Stock: ${option.quantity_available}`}
+                        {option.expiry_date && ` — Vence: ${new Date(option.expiry_date).toLocaleDateString()}`}
+                      </Typography>
+                    </Box>
+                    {isFefoRecommended(option) && (
+                      <Chip size="small" label="Vence primero" color="success" variant="outlined" />
+                    )}
+                    {option.product_sale_control && option.product_sale_control !== "libre" && (
+                      <Chip
+                        size="small"
+                        label={SALE_CONTROL_LABELS[option.product_sale_control]}
+                        color={option.product_sale_control === "controlado" ? "error" : "warning"}
+                      />
+                    )}
                   </Box>
                 </Box>
               )}
@@ -347,6 +414,22 @@ export function SellForm({
                   .join(" · ") || "Este producto no tiene laboratorio/principio activo/concentración registrados"}
               </Typography>
             </Box>
+          )}
+
+          {earlierLotForSelected && (
+            <Alert severity="info" sx={{ mt: 1 }}>
+              Sugerencia FEFO: hay otro lote de este producto que vence antes (
+              {new Date(earlierLotForSelected.expiry_date as string).toLocaleDateString()}). Considere venderlo
+              primero para evitar que caduque en el estante.
+            </Alert>
+          )}
+
+          {selectedInventory?.product_sale_control && selectedInventory.product_sale_control !== "libre" && (
+            <Alert severity={selectedInventory.product_sale_control === "controlado" ? "error" : "warning"} sx={{ mt: 1 }}>
+              {selectedInventory.product_sale_control === "controlado"
+                ? "Producto de control especial — verifique receta y registre según protocolo antes de vender."
+                : "Producto que requiere receta médica — verifique la receta antes de vender."}
+            </Alert>
           )}
 
           {similarNameWarnings.length > 0 && (

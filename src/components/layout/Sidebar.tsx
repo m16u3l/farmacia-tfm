@@ -73,7 +73,7 @@ const menuGroups = [
     items: [
       { text: "Empleados", icon: <BadgeIcon />, href: "/employees" },
       { text: "Usuarios", icon: <PeopleIcon />, href: "/users" },
-      { text: "Reportes", icon: <AssessmentIcon />, href: "/validations" },
+      { text: "Reportes", icon: <AssessmentIcon />, href: "/reports" },
       { text: "Configuración", icon: <SettingsIcon />, href: "/configuracion" },
     ],
   },

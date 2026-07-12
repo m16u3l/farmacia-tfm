@@ -26,10 +26,6 @@ export default function ConfiguracionPage() {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [severity, setSeverity] = useState<"success" | "error">("success");
 
-  useEffect(() => {
-    fetchConfiguracion();
-  }, []);
-
   const fetchConfiguracion = async () => {
     try {
       const response = await fetch("/api/configuracion");
@@ -49,6 +45,10 @@ export default function ConfiguracionPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchConfiguracion();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

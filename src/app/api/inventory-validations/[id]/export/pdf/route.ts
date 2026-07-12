@@ -12,7 +12,8 @@ const COLUMNS = [
   { label: "Dif.", width: 45 },
   { label: "Venc.Real", width: 60 },
   { label: "Estado", width: 80 },
-  { label: "Notas", width: 145 },
+  { label: "Motivo", width: 80 },
+  { label: "Notas", width: 110 },
 ];
 
 export async function GET(
@@ -78,6 +79,7 @@ export async function GET(
           diff !== null ? String(diff) : "N/A",
           item.actual_expiry_date ?? "N/A",
           item.status,
+          item.discrepancy_reason ?? "",
           item.notes ?? "",
         ],
         false

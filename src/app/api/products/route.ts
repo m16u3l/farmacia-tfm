@@ -2,24 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { corsHeaders } from "@/lib/cors";
 
 // Helper function for error responses with CORS
 const errorResponse = (error: unknown, message: string) => {
   console.error(`API Error (${message}):`, error);
   return NextResponse.json(
-    { 
+    {
       error: message,
       details: error instanceof Error ? error.message : String(error)
     },
     { status: 500, headers: corsHeaders }
   );
-};
-
-// Helper function for CORS headers
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 export async function OPTIONS() {
@@ -83,15 +77,16 @@ export async function POST(request: NextRequest) {
       unit,
       dosage_instructions,
       barcode,
+      sale_control,
       status,
     } = body;
     const client = await pool.connect();
     try {
       const session = await getSessionFromRequest(request);
       const result = await client.query(
-        `INSERT INTO products (name, description, possible_uses, additional_info, laboratory, active_ingredient, concentration, health_registry, category, type, dosage_form, unit, dosage_instructions, barcode, status, created_by)
-				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
-        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, status, session?.userId ?? null]
+        `INSERT INTO products (name, description, possible_uses, additional_info, laboratory, active_ingredient, concentration, health_registry, category, type, dosage_form, unit, dosage_instructions, barcode, sale_control, status, created_by)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
+        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, sale_control ?? "libre", status, session?.userId ?? null]
       );
       await logAudit(session?.userId ?? null, "create", "product", result.rows[0].product_id, { name });
       return NextResponse.json(result.rows[0]);

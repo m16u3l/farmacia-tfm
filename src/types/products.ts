@@ -14,10 +14,22 @@ export interface Product {
   unit?: string | null;
   dosage_instructions?: string | null;
   barcode?: string | null;
+  sale_control: SaleControl;
   status: boolean;
+  created_by?: number | null;
+  created_at?: string;
 }
 
-export type ProductFormData = Omit<Product, 'product_id'>;
+export type ProductFormData = Omit<Product, 'product_id' | 'created_by' | 'created_at'>;
+
+export const SALE_CONTROLS = ['libre', 'receta', 'controlado'] as const;
+export type SaleControl = typeof SALE_CONTROLS[number];
+
+export const SALE_CONTROL_LABELS: Record<SaleControl, string> = {
+  libre: 'Venta libre',
+  receta: 'Requiere receta',
+  controlado: 'Control especial',
+};
 
 export const DOSAGE_FORMS = [
   'tableta',

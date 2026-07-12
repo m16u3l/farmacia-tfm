@@ -28,7 +28,7 @@ import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
 import BuildIcon from "@mui/icons-material/Build";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
-import { Inventory, InventoryArea, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, Product, ValidationType } from "@/types";
+import { Inventory, InventoryArea, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, Product, ValidationType, DiscrepancyReason } from "@/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useValidations } from "@/hooks/useValidations";
 import { buildAreaOptions } from "@/utils/areaTree";
@@ -74,13 +74,6 @@ export default function InventoryValidationsPage() {
 
   const notify = (message: string, severity: "success" | "error" | "info") =>
     setSnackbar({ open: true, message, severity });
-
-  useEffect(() => {
-    fetchInventory();
-    fetchProducts();
-    fetchAreas();
-    resumeInProgressSession();
-  }, []);
 
   // Reanuda cualquier validación 'in_progress' existente en la BD al montar la
   // página — de lo contrario, recargar o navegar fuera de la página durante una
@@ -167,6 +160,13 @@ export default function InventoryValidationsPage() {
     }
   };
 
+  useEffect(() => {
+    fetchInventory();
+    fetchProducts();
+    fetchAreas();
+    resumeInProgressSession();
+  }, []);
+
   const getProductName = (productId: number) => {
     const product = products.find(p => p.product_id == productId);
     return product ? product.name : `${productId}`;
@@ -232,7 +232,12 @@ export default function InventoryValidationsPage() {
     setOpenVerifyDialog(true);
   };
 
-  const handleVerifyItem = async (data: { actual_quantity: number; actual_expiry_date: string | null; notes: string }) => {
+  const handleVerifyItem = async (data: {
+    actual_quantity: number;
+    actual_expiry_date: string | null;
+    notes: string;
+    discrepancy_reason: DiscrepancyReason | null;
+  }) => {
     if (!currentValidationItem || !activeValidation) return;
 
     const updatedItem = await verifyItem(activeValidation.validation_id, currentValidationItem.validation_item_id, data);

@@ -152,7 +152,7 @@ export default function DashboardHomePage() {
           {[
             { label: "Inventario", icon: <InventoryIcon />, href: "/inventory" },
             { label: "Órdenes de compra", icon: <LocalMallIcon />, href: "/orders" },
-            { label: "Reportes", icon: <WarningAmberIcon />, href: "/validations" },
+            { label: "Reportes", icon: <WarningAmberIcon />, href: "/reports" },
           ].map((item) => (
             <Grid item xs={12} sm={4} key={item.label}>
               <Card variant="outlined">

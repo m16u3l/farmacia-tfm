@@ -60,9 +60,18 @@ interface MonthlySales {
   products_sold: number;
 }
 
-export default function ValidationsPage() {
+const formatMonthLabel = (monthKey: string) => {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("es-ES", {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+export default function ReportsPage() {
   const [tabValue, setTabValue] = useState(0);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
+  const [selectedDaySales, setSelectedDaySales] = useState<DailySales | null>(null);
   const [monthlySales, setMonthlySales] = useState<MonthlySales[]>([]);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -71,118 +80,64 @@ export default function ValidationsPage() {
     new Date().toISOString().slice(0, 7)
   );
 
-  useEffect(() => {
-    fetchDailySales();
-    fetchMonthlySales();
-  }, []);
-
-  const fetchDailySales = async () => {
+  const fetchDailySalesHistory = async () => {
     try {
-      const response = await fetch("/api/sells");
+      const response = await fetch("/api/sells/report?granularity=daily");
       const data = await response.json();
-
-      if (!response.ok) {
+      if (!response.ok || !Array.isArray(data)) {
         console.error("Error al cargar ventas diarias:", data);
         setDailySales([]);
         return;
       }
-      if (!Array.isArray(data)) {
-        console.error("Respuesta inesperada al cargar ventas diarias:", data);
-        setDailySales([]);
-        return;
-      }
-
-      // Agrupar ventas por día
-      const salesByDay: { [key: string]: DailySales } = {};
-
-      data.forEach((sale: Record<string, unknown>) => {
-        // Validar que la fecha sea válida
-        if (!sale.sale_date) return;
-        const saleDate = new Date(String(sale.sale_date));
-        if (isNaN(saleDate.getTime())) return; // Saltar fechas inválidas
-
-        const date = saleDate.toISOString().split("T")[0];
-
-        if (!salesByDay[date]) {
-          salesByDay[date] = {
-            date,
-            total_sales: 0,
-            total_amount: 0,
-            products_sold: 0,
-          };
-        }
-
-        salesByDay[date].total_sales += 1;
-        salesByDay[date].total_amount += parseFloat(String(sale.total_amount || 0));
-        salesByDay[date].products_sold += parseInt(String(sale.quantity || 0));
-      });
-
-      const salesArray = Object.values(salesByDay).sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-
-      setDailySales(salesArray);
+      setDailySales(data);
     } catch (error) {
       console.error("Error al cargar ventas diarias:", error);
     }
   };
 
+  const fetchSelectedDaySales = async (date: string) => {
+    try {
+      const response = await fetch(`/api/sells/report?granularity=daily&date=${date}`);
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data)) {
+        console.error("Error al cargar ventas del día:", data);
+        setSelectedDaySales(null);
+        return;
+      }
+      setSelectedDaySales(data[0] ?? null);
+    } catch (error) {
+      console.error("Error al cargar ventas del día:", error);
+    }
+  };
+
   const fetchMonthlySales = async () => {
     try {
-      const response = await fetch("/api/sells");
+      const response = await fetch("/api/sells/report?granularity=monthly");
       const data = await response.json();
-
-      if (!response.ok) {
+      if (!response.ok || !Array.isArray(data)) {
         console.error("Error al cargar ventas mensuales:", data);
         setMonthlySales([]);
         return;
       }
-      if (!Array.isArray(data)) {
-        console.error("Respuesta inesperada al cargar ventas mensuales:", data);
-        setMonthlySales([]);
-        return;
-      }
-
-      // Agrupar ventas por mes
-      const salesByMonth: { [key: string]: MonthlySales } = {};
-
-      data.forEach((sale: Record<string, unknown>) => {
-        const date = new Date(String(sale.sale_date));
-        const monthKey = `${date.getFullYear()}-${String(
-          date.getMonth() + 1
-        ).padStart(2, "0")}`;
-
-        if (!salesByMonth[monthKey]) {
-          salesByMonth[monthKey] = {
-            month: new Date(
-              date.getFullYear(),
-              date.getMonth(),
-              1
-            ).toLocaleDateString("es-ES", {
-              month: "long",
-              year: "numeric",
-            }),
-            year: date.getFullYear(),
-            total_sales: 0,
-            total_amount: 0,
-            products_sold: 0,
-          };
-        }
-
-        salesByMonth[monthKey].total_sales += 1;
-        salesByMonth[monthKey].total_amount += parseFloat(String(sale.total_amount || 0));
-        salesByMonth[monthKey].products_sold += parseInt(String(sale.quantity || 0));
-      });
-
-      const salesArray = Object.values(salesByMonth).sort(
-        (a, b) => b.year - a.year
+      setMonthlySales(
+        data.map((row: { month: string; year: number; total_sales: number; total_amount: number; products_sold: number }) => ({
+          ...row,
+          month: formatMonthLabel(row.month),
+        }))
       );
-
-      setMonthlySales(salesArray);
     } catch (error) {
       console.error("Error al cargar ventas mensuales:", error);
     }
   };
+
+  useEffect(() => {
+    fetchDailySalesHistory();
+    fetchMonthlySales();
+  }, []);
+
+  useEffect(() => {
+    fetchSelectedDaySales(selectedDate);
+  }, [selectedDate]);
 
   const handleExportDailySales = () => {
     const csvContent = [
@@ -229,10 +184,6 @@ export default function ValidationsPage() {
     }.csv`;
     a.click();
   };
-
-  const filteredDailySales = dailySales.filter(
-    (sale) => sale.date === selectedDate
-  );
 
   return (
     <Box sx={{ width: "100%", height: "100%", p: { xs: 1, sm: 3 } }}>
@@ -283,49 +234,47 @@ export default function ValidationsPage() {
             </Button>
           </Box>
 
-          {filteredDailySales.length > 0 ? (
-            <>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={4}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Total Ventas
-                      </Typography>
-                      <Typography variant="h4">
-                        {filteredDailySales[0].total_sales}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Monto Total
-                      </Typography>
-                      <Typography variant="h4" color="primary">
-                        ${filteredDailySales[0].total_amount}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Card>
-                    <CardContent>
-                      <Typography color="textSecondary" gutterBottom>
-                        Productos Vendidos
-                      </Typography>
-                      <Typography variant="h4">
-                        {filteredDailySales[0].products_sold}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
+          {selectedDaySales ? (
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={12} sm={4}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Total Ventas
+                    </Typography>
+                    <Typography variant="h4">
+                      {selectedDaySales.total_sales}
+                    </Typography>
+                  </CardContent>
+                </Card>
               </Grid>
-            </>
+              <Grid item xs={12} sm={4}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Monto Total
+                    </Typography>
+                    <Typography variant="h4" color="primary">
+                      ${selectedDaySales.total_amount}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                      Productos Vendidos
+                    </Typography>
+                    <Typography variant="h4">
+                      {selectedDaySales.products_sold}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
           ) : (
-            <Alert severity="info">
+            <Alert severity="info" sx={{ mb: 3 }}>
               No hay ventas registradas para esta fecha.
             </Alert>
           )}
@@ -352,7 +301,7 @@ export default function ValidationsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dailySales.slice(0, 10).map((sale, index) => (
+                {dailySales.map((sale, index) => (
                   <TableRow
                     key={index}
                     sx={{ "&:nth-of-type(even)": { bgcolor: "action.hover" } }}

@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationType } from '@/types';
+import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationType, DiscrepancyReason } from '@/types';
 
 export const validationService = {
   async createSession(data: { type: ValidationType; area_id?: number; notes?: string }): Promise<InventoryValidationWithItems> {
@@ -17,7 +17,7 @@ export const validationService = {
     return apiRequest<InventoryValidation[]>(`/api/inventory-validations${status ? `?status=${status}` : ''}`);
   },
 
-  async verifyItem(validationId: number, itemId: number, data: { actual_quantity: number; actual_expiry_date?: string | null; notes?: string }): Promise<InventoryValidationItem> {
+  async verifyItem(validationId: number, itemId: number, data: { actual_quantity: number; actual_expiry_date?: string | null; notes?: string; discrepancy_reason?: DiscrepancyReason | null }): Promise<InventoryValidationItem> {
     return apiRequest<InventoryValidationItem>(`/api/inventory-validations/${validationId}/items/${itemId}`, {
       method: 'PUT',
       body: data

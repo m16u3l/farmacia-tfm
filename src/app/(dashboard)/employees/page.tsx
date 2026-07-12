@@ -206,6 +206,11 @@ export default function EmployeesPage() {
             </Button>
           }
         />
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Un <b>empleado</b> es la ficha de RR.HH. de la persona (no da acceso al sistema).
+          Si además necesita iniciar sesión, crea o edita su cuenta en{" "}
+          <b>Usuarios</b> y vincúlala a este empleado desde ahí.
+        </Alert>
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             rows={employees}

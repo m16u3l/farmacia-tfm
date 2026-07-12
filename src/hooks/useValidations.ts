@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validationService } from '@/services/validationService';
-import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationType } from '@/types';
+import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationType, DiscrepancyReason } from '@/types';
 
 export const useValidations = () => {
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,7 @@ export const useValidations = () => {
   const verifyItem = async (
     validationId: number,
     itemId: number,
-    data: { actual_quantity: number; actual_expiry_date?: string | null; notes?: string }
+    data: { actual_quantity: number; actual_expiry_date?: string | null; notes?: string; discrepancy_reason?: DiscrepancyReason | null }
   ): Promise<InventoryValidationItem | null> => {
     setLoading(true);
     setError(null);

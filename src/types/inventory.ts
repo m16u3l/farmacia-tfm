@@ -1,4 +1,4 @@
-import { Product } from './products';
+import { Product, SaleControl } from './products';
 
 export interface Inventory {
   inventory_id: number;
@@ -18,6 +18,7 @@ export interface Inventory {
   product_active_ingredient?: string | null;  // For joined queries
   product_concentration?: string | null;  // For joined queries
   product_barcode?: string | null;  // For joined queries
+  product_sale_control?: SaleControl | null;  // For joined queries
   area_name?: string;  // For joined queries
 }
 

@@ -10,7 +10,7 @@ export async function PUT(
   const params = await context.params;
   try {
     const data = await request.json();
-    const { actual_quantity, actual_expiry_date, notes } = data;
+    const { actual_quantity, actual_expiry_date, notes, discrepancy_reason } = data;
 
     if (actual_quantity === undefined || actual_quantity === null || actual_quantity < 0) {
       return NextResponse.json(
@@ -50,10 +50,19 @@ export async function PUT(
       const session = await getSessionFromRequest(request);
       const result = await client.query(
         `UPDATE inventory_validation_items
-         SET actual_quantity = $1, actual_expiry_date = $2, status = $3, notes = $4, verified_by = $5, verified_at = NOW()
-         WHERE validation_item_id = $6
+         SET actual_quantity = $1, actual_expiry_date = $2, status = $3, notes = $4,
+             discrepancy_reason = $5, verified_by = $6, verified_at = NOW()
+         WHERE validation_item_id = $7
          RETURNING *`,
-        [actual_quantity, actual_expiry_date || null, status, notes || null, session?.userId ?? null, params.itemId]
+        [
+          actual_quantity,
+          actual_expiry_date || null,
+          status,
+          notes || null,
+          status === "confirmed" ? null : discrepancy_reason || null,
+          session?.userId ?? null,
+          params.itemId,
+        ]
       );
 
       await logAudit(session?.userId ?? null, "update", "inventory_validation_item", Number(params.itemId), {

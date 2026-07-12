@@ -16,6 +16,8 @@ import {
   PRODUCT_TYPES,
   PRODUCT_CATEGORIES,
   PRODUCT_UNITS,
+  SALE_CONTROLS,
+  SALE_CONTROL_LABELS,
 } from "@/types/products";
 
 
@@ -199,6 +201,22 @@ export function ProductForm({
                 value={formData.barcode ?? ""}
                 onChange={(e) => onChange("barcode", e.target.value)}
               />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                label="Control de venta"
+                fullWidth
+                value={formData.sale_control ?? "libre"}
+                onChange={(e) => onChange("sale_control", e.target.value)}
+                helperText="Define si requiere receta o es de control especial en el punto de venta"
+              >
+                {SALE_CONTROLS.map((control) => (
+                  <MenuItem key={control} value={control}>
+                    {SALE_CONTROL_LABELS[control]}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid item xs={12}>
               <TextField

@@ -21,7 +21,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import StorefrontIcon from "@mui/icons-material/StorefrontOutlined";
-import { Product, ProductFormData } from "@/types/products";
+import { Product, ProductFormData, SaleControl, SALE_CONTROL_LABELS } from "@/types/products";
 // Date utilities removed as they're not used
 import { ProductForm } from "@/components/products/ProductForm";
 import { useProducts } from "@/hooks/useProducts";
@@ -48,6 +48,7 @@ export default function ProductsPage() {
     dosage_form: "",
     unit: "",
     barcode: "",
+    sale_control: "libre",
     status: true
   });
   const [snackbar, setSnackbar] = useState({
@@ -97,6 +98,7 @@ export default function ProductsPage() {
       dosage_form: product.dosage_form ?? "",
       unit: product.unit ?? "",
       barcode: product.barcode ?? "",
+      sale_control: product.sale_control ?? "libre",
       status: product.status
     });
     setIsEditing(true);
@@ -173,6 +175,7 @@ export default function ProductsPage() {
       dosage_form: "",
       unit: "",
       barcode: "",
+      sale_control: "libre",
       status: true
     });
     setIsEditing(false);
@@ -193,6 +196,26 @@ export default function ProductsPage() {
     { field: "dosage_form", headerName: "Forma", flex: 1, minWidth: 100 },
     { field: "unit", headerName: "Unidad", flex: 1, minWidth: 80 },
     { field: "barcode", headerName: "Código", flex: 1.2, minWidth: 100 },
+    {
+      field: "sale_control",
+      headerName: "Control de venta",
+      flex: 1.3,
+      minWidth: 130,
+      renderCell: (params: GridRenderCellParams) => (
+        <Chip
+          size="small"
+          label={SALE_CONTROL_LABELS[params.value as SaleControl] ?? params.value}
+          color={
+            params.value === "controlado"
+              ? "error"
+              : params.value === "receta"
+              ? "warning"
+              : "default"
+          }
+          variant={params.value === "libre" ? "outlined" : "filled"}
+        />
+      ),
+    },
     {
       field: "status",
       headerName: "Estado",
@@ -351,6 +374,24 @@ export default function ProductsPage() {
                 <Typography variant="body2">
                   {detailProduct?.health_registry || "No especificado"}
                 </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Control de venta
+                </Typography>
+                <Chip
+                  size="small"
+                  label={SALE_CONTROL_LABELS[detailProduct?.sale_control ?? "libre"]}
+                  color={
+                    detailProduct?.sale_control === "controlado"
+                      ? "error"
+                      : detailProduct?.sale_control === "receta"
+                      ? "warning"
+                      : "default"
+                  }
+                  variant={detailProduct?.sale_control === "libre" || !detailProduct?.sale_control ? "outlined" : "filled"}
+                  sx={{ mt: 0.5 }}
+                />
               </Box>
             </Box>
             <Box>

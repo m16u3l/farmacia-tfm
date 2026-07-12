@@ -19,7 +19,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[] | "*"> = {
     "/cash-register-closures",
     "/orders",
     "/suppliers",
-    "/validations",
+    "/reports",
   ],
   cajero: ["/dashboard", "/sells", "/cash-register-closures", "/inventory"],
 };
