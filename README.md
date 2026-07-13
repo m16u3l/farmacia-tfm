@@ -134,6 +134,11 @@ Ambos scripts usan un contenedor `postgres:17-alpine` como cliente en vez del `p
    psql "$DB_CONNECTION" -f db/migrations/013_products_identification_fields.sql
    psql "$DB_CONNECTION" -f db/migrations/014_products_sale_control.sql
    psql "$DB_CONNECTION" -f db/migrations/015_validation_items_discrepancy_reason.sql
+   psql "$DB_CONNECTION" -f db/migrations/016_orders_restock_requests.sql
+   psql "$DB_CONNECTION" -f db/migrations/017_expenses_and_sell_unit_cost.sql
+   psql "$DB_CONNECTION" -f db/migrations/018_configuracion_validation_period.sql
+   psql "$DB_CONNECTION" -f db/migrations/019_products_low_stock_threshold.sql
+   psql "$DB_CONNECTION" -f db/migrations/020_inventory_movements_reason.sql
    ```
 3. Antes de correr una migración, **verifica manualmente si ya la corriste antes** (no hay tabla de control) — por ejemplo con `\d nombre_tabla` en `psql` para ver si la columna/tabla ya existe. Correr una migración dos veces puede fallar o duplicar datos según el archivo.
 

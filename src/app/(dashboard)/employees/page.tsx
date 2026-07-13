@@ -217,9 +217,6 @@ export default function EmployeesPage() {
             autoHeight
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
-            slots={{
-              noRowsOverlay: CustomNoRowsOverlay,
-            }}
             columnVisibilityModel={
               isMobile
                 ? { employee_id: false, email: false, phone: false, position: false, status: false }

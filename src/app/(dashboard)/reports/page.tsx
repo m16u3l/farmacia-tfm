@@ -124,12 +124,9 @@ export default function ReportsPage() {
         setMonthlySales([]);
         return;
       }
-      setMonthlySales(
-        data.map((row: MonthlySales) => ({
-          ...row,
-          month: formatMonthLabel(row.month),
-        }))
-      );
+      // month se guarda crudo ("YYYY-MM") para poder filtrar por el selector
+      // de mes; se formatea recién al mostrar/exportar.
+      setMonthlySales(data);
     } catch (error) {
       console.error("Error al cargar ventas mensuales:", error);
     }
@@ -170,6 +167,11 @@ export default function ReportsPage() {
   // El API solo incluye costo/gastos/ganancia para admin
   const hasProfit = monthlySales.some((sale) => sale.net_profit !== undefined);
 
+  // El selector de mes filtra la tabla y el export; vacío = todos los meses.
+  const visibleMonthlySales = selectedMonth
+    ? monthlySales.filter((sale) => sale.month === selectedMonth)
+    : monthlySales;
+
   const handleExportMonthlySales = () => {
     const csvContent = [
       [
@@ -179,8 +181,8 @@ export default function ReportsPage() {
         "Productos Vendidos",
         ...(hasProfit ? ["Costo Productos", "Gastos", "Ganancia Neta"] : []),
       ],
-      ...monthlySales.map((sale) => [
-        sale.month,
+      ...visibleMonthlySales.map((sale) => [
+        formatMonthLabel(sale.month),
         sale.total_sales,
         `$${sale.total_amount}`,
         sale.products_sold,
@@ -400,13 +402,22 @@ export default function ReportsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {monthlySales.map((sale, index) => (
+                {visibleMonthlySales.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={hasProfit ? 7 : 4}>
+                      <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+                        Sin datos para el mes seleccionado
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {visibleMonthlySales.map((sale, index) => (
                   <TableRow
                     key={index}
                     sx={{ "&:nth-of-type(even)": { bgcolor: "action.hover" } }}
                   >
                     <TableCell sx={{ textTransform: "capitalize" }}>
-                      {sale.month}
+                      {formatMonthLabel(sale.month)}
                     </TableCell>
                     <TableCell>{sale.total_sales}</TableCell>
                     <TableCell>
