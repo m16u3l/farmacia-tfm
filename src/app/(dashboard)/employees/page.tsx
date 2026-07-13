@@ -34,28 +34,6 @@ function LoadingState() {
   );
 }
 
-function CustomNoRowsOverlay() {
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        p: 2,
-      }}
-    >
-      <Typography variant="h6" color="text.secondary">
-        No hay empleados registrados
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Agregue un nuevo empleado usando el botón &quot;Nuevo empleado&quot;
-      </Typography>
-    </Box>
-  );
-}
-
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);

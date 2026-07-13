@@ -38,28 +38,6 @@ function LoadingState() {
   );
 }
 
-function CustomNoRowsOverlay() {
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        p: 2,
-      }}
-    >
-      <Typography variant="h6" color="text.secondary">
-        No hay usuarios registrados
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Agregue un nuevo usuario usando el botón &quot;Nuevo usuario&quot;
-      </Typography>
-    </Box>
-  );
-}
-
 export default function UsersPage() {
   const {
     users,
@@ -206,9 +184,6 @@ export default function UsersPage() {
             pageSizeOptions={[5, 10, 25]}
             disableRowSelectionOnClick
             loading={isLoading}
-            slots={{
-              noRowsOverlay: CustomNoRowsOverlay,
-            }}
             columnVisibilityModel={
               isMobile
                 ? { id: false, last_name: false, email: false, is_active: false }
