@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { corsHeaders } from "@/lib/cors";
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
 
 export async function GET(
   request: NextRequest,
@@ -22,7 +27,7 @@ export async function GET(
       if (validationResult.rows.length === 0) {
         return NextResponse.json(
           { error: "Validación de inventario no encontrada" },
-          { status: 404 }
+          { status: 404, headers: corsHeaders }
         );
       }
 
@@ -40,7 +45,7 @@ export async function GET(
         [params.id]
       );
 
-      return NextResponse.json({ ...validationResult.rows[0], items: itemsResult.rows });
+      return NextResponse.json({ ...validationResult.rows[0], items: itemsResult.rows }, { headers: corsHeaders });
     } finally {
       client.release();
     }
@@ -48,7 +53,7 @@ export async function GET(
     console.error("Error fetching inventory validation:", error);
     return NextResponse.json(
       { error: "Error al obtener la validación de inventario" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

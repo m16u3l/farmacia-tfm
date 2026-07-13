@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
 import { roleCanAccess, roleCanAccessApi } from "@/lib/permissions";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
 const PUBLIC_PATHS = ["/", "/login"];
 // /api/cron se autentica con CRON_SECRET (bearer token), no con sesión —
 // Vercel Cron lo invoca sin cookie de sesión.
@@ -15,6 +21,10 @@ function isPublicPath(pathname: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers: corsHeaders });
+  }
 
   if (isPublicPath(pathname)) {
     return NextResponse.next();
@@ -37,7 +47,7 @@ export async function middleware(request: NextRequest) {
     if (!roleCanAccessApi(session.role, pathname)) {
       return NextResponse.json(
         { error: "No tiene permiso para acceder a este recurso" },
-        { status: 403 }
+        { status: 403, headers: corsHeaders }
       );
     }
     return NextResponse.next();

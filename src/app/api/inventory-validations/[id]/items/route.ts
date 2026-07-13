@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
+import { corsHeaders } from "@/lib/cors";
 import { logAudit } from "@/lib/audit";
 
 // Agrega un ítem a una validación de área en progreso, para productos
@@ -13,6 +14,10 @@ import { logAudit } from "@/lib/audit";
 //                  validada con la cantidad contada y entra como ítem 'added'
 //                  (expected 0 / actual contado) — no requiere ajuste posterior
 //                  porque el lote ya nace con la cantidad real.
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -230,7 +235,7 @@ export async function POST(
         [insertedItem.validation_item_id]
       );
 
-      return NextResponse.json(joinedResult.rows[0]);
+      return NextResponse.json(joinedResult.rows[0], { headers: corsHeaders });
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
@@ -241,7 +246,7 @@ export async function POST(
     console.error("Error adding validation item:", error);
     return NextResponse.json(
       { error: "Error al agregar el ítem a la validación" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

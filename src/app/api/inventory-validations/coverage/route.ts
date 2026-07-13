@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/config/db";
+import { corsHeaders } from "@/lib/cors";
 import { getConfiguracionThresholds } from "@/lib/configuracion";
 import {
   AreaCoverage,
@@ -19,6 +20,10 @@ const DISCREPANCY_EXISTS = `EXISTS (
 // Días con "aviso previo": un área vigente pasa a "por vencer" cuando le
 // quedan estos días o menos de vigencia.
 const DUE_SOON_DAYS = 7;
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
 
 export async function GET() {
   try {
@@ -129,7 +134,7 @@ export async function GET() {
         areas,
       };
 
-      return NextResponse.json(coverage);
+      return NextResponse.json(coverage, { headers: corsHeaders });
     } finally {
       client.release();
     }
@@ -137,7 +142,7 @@ export async function GET() {
     console.error("Error fetching inventory validation coverage:", error);
     return NextResponse.json(
       { error: "Error al obtener el estado de validación del inventario" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

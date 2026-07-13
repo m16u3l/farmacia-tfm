@@ -9,13 +9,14 @@ if (!connectionString) {
 
 const connectionUrl = new URL(connectionString);
 const isLocalConnection = ['localhost', '127.0.0.1', '::1'].includes(connectionUrl.hostname);
+const poolMax = Number.parseInt(process.env.DB_POOL_MAX || '5', 10);
 
 const pool = new Pool({
   connectionString,
   ssl: isLocalConnection ? false : {
     rejectUnauthorized: false,
   },
-  max: 10,
+  max: Number.isFinite(poolMax) && poolMax > 0 ? poolMax : 5,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });

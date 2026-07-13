@@ -50,6 +50,9 @@ export async function PUT(
       low_stock_threshold,
       status,
     } = body;
+    const normalizedBarcode = typeof barcode === "string"
+      ? barcode.trim() || null
+      : barcode ?? null;
     const client = await pool.connect();
     try {
       await client.query(
@@ -59,7 +62,7 @@ export async function PUT(
              dosage_form = $11, unit = $12, dosage_instructions = $13, barcode = $14, sale_control = $15,
              low_stock_threshold = $16, status = $17
          WHERE product_id = $18`,
-        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, sale_control ?? "libre", low_stock_threshold ?? null, status, params.id]
+        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, normalizedBarcode, sale_control ?? "libre", low_stock_threshold ?? null, status, params.id]
       );
       const session = await getSessionFromRequest(request);
       await logAudit(session?.userId ?? null, "update", "product", Number(params.id), { name });

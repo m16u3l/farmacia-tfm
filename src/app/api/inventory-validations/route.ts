@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { corsHeaders } from "@/lib/cors";
 import { getConfiguracionThresholds, ConfiguracionThresholds } from "@/lib/configuracion";
 
 // area/expired no dependen de configuración; expiring/low_stock sí, y su
@@ -18,6 +19,10 @@ const ITEM_FILTERS: Record<string, (thresholds: ConfiguracionThresholds) => stri
        ${low_stock_threshold}
      )`,
 };
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,7 +41,7 @@ export async function GET(request: NextRequest) {
         ORDER BY v.started_at DESC`,
         status ? [status] : []
       );
-      return NextResponse.json(result.rows);
+      return NextResponse.json(result.rows, { headers: corsHeaders });
     } finally {
       client.release();
     }
@@ -44,7 +49,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching inventory validations:", error);
     return NextResponse.json(
       { error: "Error al obtener las validaciones de inventario" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -110,7 +115,7 @@ export async function POST(request: NextRequest) {
         [validation.validation_id]
       );
 
-      return NextResponse.json({ ...validation, items: itemsResult.rows });
+      return NextResponse.json({ ...validation, items: itemsResult.rows }, { headers: corsHeaders });
     } catch (error) {
       await client.query("ROLLBACK");
       if ((error as { code?: string }).code === "23505") {
@@ -130,7 +135,7 @@ export async function POST(request: NextRequest) {
     console.error("Error creating inventory validation:", error);
     return NextResponse.json(
       { error: "Error al crear la validación de inventario" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
