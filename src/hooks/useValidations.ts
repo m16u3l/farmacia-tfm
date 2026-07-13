@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validationService } from '@/services/validationService';
-import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationType, DiscrepancyReason } from '@/types';
+import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
 
 export const useValidations = () => {
   const [loading, setLoading] = useState(false);
@@ -101,6 +101,19 @@ export const useValidations = () => {
     }
   };
 
+  const getCoverage = async (): Promise<ValidationCoverage | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      return await validationService.getCoverage();
+    } catch (err) {
+      setError((err as Error).message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     error,
@@ -110,6 +123,7 @@ export const useValidations = () => {
     verifyItem,
     completeSession,
     cancelSession,
-    applyAdjustments
+    applyAdjustments,
+    getCoverage
   };
 };

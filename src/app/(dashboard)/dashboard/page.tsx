@@ -7,6 +7,7 @@ import InventoryIcon from "@mui/icons-material/Inventory2Outlined";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSaleOutlined";
 import LocalMallIcon from "@mui/icons-material/LocalMallOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmberOutlined";
+import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import DashboardIcon from "@mui/icons-material/SpaceDashboardOutlined";
@@ -16,6 +17,8 @@ interface Stats {
   lowStock: number;
   sellsToday: number;
   pendingOrders: number;
+  // null = sin dato (p. ej. rol sin acceso a inventory-validations): se oculta.
+  validationCoverage: number | null;
 }
 
 export default function DashboardHomePage() {
@@ -24,23 +27,27 @@ export default function DashboardHomePage() {
     lowStock: 0,
     sellsToday: 0,
     pendingOrders: 0,
+    validationCoverage: null,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [productsRes, inventoryRes, sellsRes, ordersRes] = await Promise.all([
+        const [productsRes, inventoryRes, sellsRes, ordersRes, coverageRes] = await Promise.all([
           fetch("/api/products"),
           fetch("/api/inventory"),
           fetch("/api/sells"),
           fetch("/api/orders"),
+          // 403 para roles sin acceso a inventory-validations: la tarjeta se oculta.
+          fetch("/api/inventory-validations/coverage"),
         ]);
-        const [products, inventory, sells, orders] = await Promise.all([
+        const [products, inventory, sells, orders, coverage] = await Promise.all([
           productsRes.ok ? productsRes.json() : [],
           inventoryRes.ok ? inventoryRes.json() : [],
           sellsRes.ok ? sellsRes.json() : [],
           ordersRes.ok ? ordersRes.json() : [],
+          coverageRes.ok ? coverageRes.json() : null,
         ]);
 
         const today = new Date().toISOString().slice(0, 10);
@@ -59,6 +66,10 @@ export default function DashboardHomePage() {
           lowStock,
           sellsToday,
           pendingOrders,
+          validationCoverage:
+            coverage && typeof coverage.coverage_percent === "number"
+              ? coverage.coverage_percent
+              : null,
         });
       } catch {
         // Silenciamos errores de red; las tarjetas muestran 0 por defecto.
@@ -69,7 +80,7 @@ export default function DashboardHomePage() {
     load();
   }, []);
 
-  const cards = [
+  const cards: { label: string; value: number | string; icon: React.ReactNode; href: string; color: string }[] = [
     {
       label: "Productos activos",
       value: stats.products,
@@ -100,6 +111,16 @@ export default function DashboardHomePage() {
     },
   ];
 
+  if (stats.validationCoverage !== null) {
+    cards.push({
+      label: "Inventario validado",
+      value: `${stats.validationCoverage}%`,
+      icon: <FactCheckOutlinedIcon />,
+      href: "/inventory-validations",
+      color: stats.validationCoverage === 100 ? "#0E7C66" : "#E8720C",
+    });
+  }
+
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
       <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
@@ -111,7 +132,7 @@ export default function DashboardHomePage() {
 
         <Grid container spacing={2}>
           {cards.map((card) => (
-            <Grid item xs={12} sm={6} md={3} key={card.label}>
+            <Grid item xs={12} sm={6} md={cards.length > 4 ? 2.4 : 3} key={card.label}>
               <Card variant="outlined">
                 <CardActionArea component={Link} href={card.href}>
                   <CardContent>

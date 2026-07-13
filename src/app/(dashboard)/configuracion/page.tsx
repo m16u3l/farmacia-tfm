@@ -19,6 +19,7 @@ export default function ConfiguracionPage() {
   const [form, setForm] = useState<ConfiguracionFormData>({
     low_stock_threshold: 10,
     expiry_alert_days: 40,
+    validation_period_days: 30,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,6 +35,7 @@ export default function ConfiguracionPage() {
         setForm({
           low_stock_threshold: data.low_stock_threshold,
           expiry_alert_days: data.expiry_alert_days,
+          validation_period_days: data.validation_period_days,
         });
       }
     } catch (error) {
@@ -129,6 +131,21 @@ export default function ConfiguracionPage() {
             helperText="Lotes que vencen dentro de estos días se consideran 'próximos a vencer'"
             sx={{ mb: 3 }}
             slotProps={{ htmlInput: { min: 0 } }}
+          />
+
+          <TextField
+            fullWidth
+            label="Vigencia de una validación de inventario (días)"
+            type="number"
+            value={form.validation_period_days}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, validation_period_days: Number(e.target.value) }))
+            }
+            required
+            disabled={saving}
+            helperText="Un área validada vuelve a quedar pendiente pasados estos días (30 = conteo mensual)"
+            sx={{ mb: 3 }}
+            slotProps={{ htmlInput: { min: 1 } }}
           />
 
           <Button

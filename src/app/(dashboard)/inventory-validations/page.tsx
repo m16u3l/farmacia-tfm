@@ -37,6 +37,7 @@ import { buildAreaOptions } from "@/utils/areaTree";
 import { VALIDATION_ITEM_STATUS_LABELS, VALIDATION_TYPE_LABELS } from "@/utils/validationLabels";
 import { VerifyItemDialog } from "./_components/VerifyItemDialog";
 import { HistoryTab } from "./_components/HistoryTab";
+import { CoverageTab } from "./_components/CoverageTab";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -226,6 +227,25 @@ export default function InventoryValidationsPage() {
     setActiveValidation(session);
     notify(
       `Validación de "${VALIDATION_TYPE_LABELS[validationType]}" iniciada (${session.items.length} ítems). Verifique cada uno.`,
+      "info"
+    );
+  };
+
+  // Inicia una validación de área desde la pestaña Estado y salta a Validar.
+  const handleStartAreaValidation = async (areaId: number) => {
+    setValidationType("area");
+    setSelectedValidationAreaId(areaId);
+    setTabValue(0);
+
+    const session = await createSession({ type: "area", area_id: areaId });
+    if (!session) {
+      notify(error || "Error al iniciar la validación", "error");
+      return;
+    }
+
+    setActiveValidation(session);
+    notify(
+      `Validación de "${VALIDATION_TYPE_LABELS.area}" iniciada (${session.items.length} ítems). Verifique cada uno.`,
       "info"
     );
   };
@@ -445,6 +465,7 @@ export default function InventoryValidationsPage() {
         <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
           <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
             <Tab label="Validar" />
+            <Tab label="Estado" />
             <Tab label="Historial" />
           </Tabs>
         </Box>
@@ -888,6 +909,14 @@ export default function InventoryValidationsPage() {
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
+          <CoverageTab
+            areas={areas}
+            verificationMode={verificationMode}
+            onStartValidation={handleStartAreaValidation}
+          />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
           <HistoryTab areas={areas} onNotify={notify} />
         </TabPanel>
       </Paper>

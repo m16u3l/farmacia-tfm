@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationType, DiscrepancyReason } from '@/types';
+import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
 
 export const validationService = {
   async createSession(data: { type: ValidationType; area_id?: number; notes?: string }): Promise<InventoryValidationWithItems> {
@@ -40,5 +40,9 @@ export const validationService = {
     return apiRequest<ValidationAdjustmentResult>(`/api/inventory-validations/${id}/apply-adjustments`, {
       method: 'POST'
     });
+  },
+
+  async getCoverage(): Promise<ValidationCoverage> {
+    return apiRequest<ValidationCoverage>('/api/inventory-validations/coverage');
   }
 };

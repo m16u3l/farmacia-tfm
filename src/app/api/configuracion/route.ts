@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { low_stock_threshold, expiry_alert_days } = await request.json();
+    const { low_stock_threshold, expiry_alert_days, validation_period_days } = await request.json();
 
     if (
       !Number.isInteger(low_stock_threshold) ||
@@ -39,13 +39,19 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!Number.isInteger(validation_period_days) || validation_period_days < 1) {
+      return NextResponse.json(
+        { error: "La vigencia de validación debe ser un número entero mayor o igual a 1" },
+        { status: 400 }
+      );
+    }
 
     const result = await pool.query(
       `UPDATE configuracion
-       SET low_stock_threshold = $1, expiry_alert_days = $2, updated_at = NOW()
+       SET low_stock_threshold = $1, expiry_alert_days = $2, validation_period_days = $3, updated_at = NOW()
        WHERE id = (SELECT id FROM configuracion ORDER BY id LIMIT 1)
        RETURNING *`,
-      [low_stock_threshold, expiry_alert_days]
+      [low_stock_threshold, expiry_alert_days, validation_period_days]
     );
 
     if (result.rows.length === 0) {
@@ -59,6 +65,7 @@ export async function PUT(request: NextRequest) {
     await logAudit(session?.userId ?? null, "update", "configuracion", result.rows[0].id, {
       low_stock_threshold,
       expiry_alert_days,
+      validation_period_days,
     });
 
     return NextResponse.json(result.rows[0]);

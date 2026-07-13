@@ -276,10 +276,13 @@ CREATE INDEX IF NOT EXISTS idx_expenses_expense_date ON expenses(expense_date);
 --    alertar vencimientos, usados por inventory-validations y /api/cron.
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS configuracion (
-  id                    SERIAL PRIMARY KEY,
-  low_stock_threshold   INTEGER NOT NULL DEFAULT 10 CHECK (low_stock_threshold >= 0),
-  expiry_alert_days     INTEGER NOT NULL DEFAULT 40 CHECK (expiry_alert_days >= 0),
-  updated_at            TIMESTAMP NOT NULL DEFAULT NOW()
+  id                      SERIAL PRIMARY KEY,
+  low_stock_threshold     INTEGER NOT NULL DEFAULT 10 CHECK (low_stock_threshold >= 0),
+  expiry_alert_days       INTEGER NOT NULL DEFAULT 40 CHECK (expiry_alert_days >= 0),
+  -- Días durante los que una validación de área conciliada se considera
+  -- vigente para la cobertura de inventario (30 = ciclo de conteo mensual).
+  validation_period_days  INTEGER NOT NULL DEFAULT 30 CHECK (validation_period_days >= 1),
+  updated_at              TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- -----------------------------------------------------------------------------

@@ -62,3 +62,36 @@ export interface ValidationAdjustmentResult {
   applied: ValidationAdjustmentApplied[];
   skipped: { validation_item_id: number; inventory_id: number | null; reason: string }[];
 }
+
+// Estado de cobertura por área (GET /api/inventory-validations/coverage):
+// validated: última validación conciliada dentro del período de vigencia.
+// due_soon:  vigente, pero le quedan pocos días.
+// overdue:   la última validación conciliada ya expiró.
+// never:     nunca tuvo una validación conciliada.
+// no_stock:  sin lotes con stock — no requiere conteo, excluida del %.
+export type AreaCoverageStatus = 'validated' | 'due_soon' | 'overdue' | 'never' | 'no_stock';
+
+export interface AreaCoverage {
+  area_id: number;
+  name: string;
+  parent_area_id: number | null;
+  active_lots: number;
+  last_validation_id: number | null;
+  last_validated_at: string | null;
+  validated_by_name: string | null;
+  days_since_validated: number | null;
+  days_remaining: number | null;
+  // Hay una validación completada posterior a la última conciliada cuyos
+  // ajustes al inventario aún no se aplicaron.
+  has_pending_adjustments: boolean;
+  status: AreaCoverageStatus;
+}
+
+export interface ValidationCoverage {
+  validation_period_days: number;
+  total_areas: number;
+  validated_areas: number;
+  coverage_percent: number;
+  fully_validated: boolean;
+  areas: AreaCoverage[];
+}

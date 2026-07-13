@@ -3,6 +3,7 @@ import { Pool, PoolClient } from "pg";
 export interface ConfiguracionThresholds {
   low_stock_threshold: number;
   expiry_alert_days: number;
+  validation_period_days: number;
 }
 
 // Usados solo si la fila de configuracion no existe todavía (debería estar
@@ -10,13 +11,14 @@ export interface ConfiguracionThresholds {
 const FALLBACK_THRESHOLDS: ConfiguracionThresholds = {
   low_stock_threshold: 10,
   expiry_alert_days: 40,
+  validation_period_days: 30,
 };
 
 export async function getConfiguracionThresholds(
   client: Pool | PoolClient
 ): Promise<ConfiguracionThresholds> {
   const result = await client.query(
-    "SELECT low_stock_threshold, expiry_alert_days FROM configuracion ORDER BY id LIMIT 1"
+    "SELECT low_stock_threshold, expiry_alert_days, validation_period_days FROM configuracion ORDER BY id LIMIT 1"
   );
   return result.rows[0] ?? FALLBACK_THRESHOLDS;
 }
