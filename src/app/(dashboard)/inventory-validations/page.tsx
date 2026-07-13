@@ -28,14 +28,16 @@ import DownloadIcon from "@mui/icons-material/Download";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import EditIcon from "@mui/icons-material/Edit";
 import BuildIcon from "@mui/icons-material/Build";
+import AddIcon from "@mui/icons-material/Add";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
-import { Inventory, InventoryArea, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, Product, ValidationType, DiscrepancyReason } from "@/types";
+import { AddValidationItemInput, Inventory, InventoryArea, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, Product, ValidationType, DiscrepancyReason } from "@/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useValidations } from "@/hooks/useValidations";
 import { buildAreaOptions } from "@/utils/areaTree";
 import { VALIDATION_ITEM_STATUS_LABELS, VALIDATION_TYPE_LABELS } from "@/utils/validationLabels";
 import { VerifyItemDialog } from "./_components/VerifyItemDialog";
+import { AddItemDialog } from "./_components/AddItemDialog";
 import { HistoryTab } from "./_components/HistoryTab";
 import { CoverageTab } from "./_components/CoverageTab";
 
@@ -64,6 +66,7 @@ export default function InventoryValidationsPage() {
   const [reviewValidation, setReviewValidation] = useState<InventoryValidationWithItems | null>(null);
   const [resumeCandidates, setResumeCandidates] = useState<InventoryValidation[]>([]);
   const [openVerifyDialog, setOpenVerifyDialog] = useState(false);
+  const [openAddItemDialog, setOpenAddItemDialog] = useState(false);
   const [currentValidationItem, setCurrentValidationItem] = useState<InventoryValidationItem | null>(null);
   const [applyingAdjustments, setApplyingAdjustments] = useState(false);
   const [snackbar, setSnackbar] = useState({
@@ -72,7 +75,7 @@ export default function InventoryValidationsPage() {
     severity: "success" as "success" | "error" | "info",
   });
 
-  const { error, createSession, verifyItem, completeSession, cancelSession, getAll, getSession, applyAdjustments } = useValidations();
+  const { error, createSession, addItem, verifyItem, completeSession, cancelSession, getAll, getSession, applyAdjustments } = useValidations();
   const { confirm, confirmDialog } = useConfirmDialog();
   const verificationMode = activeValidation !== null;
 
@@ -248,6 +251,30 @@ export default function InventoryValidationsPage() {
       `Validación de "${VALIDATION_TYPE_LABELS.area}" iniciada (${session.items.length} ítems). Verifique cada uno.`,
       "info"
     );
+  };
+
+  const handleAddItem = async (data: AddValidationItemInput) => {
+    if (!activeValidation) return;
+
+    const newItem = await addItem(activeValidation.validation_id, data);
+    if (!newItem) {
+      notify(error || "Error al agregar el ítem a la validación", "error");
+      return;
+    }
+
+    setActiveValidation({
+      ...activeValidation,
+      items: [...activeValidation.items, newItem],
+    });
+    setOpenAddItemDialog(false);
+    notify(
+      data.mode === "create"
+        ? `${newItem.product_name || "Ítem"} agregado al inventario y a la validación`
+        : `${newItem.product_name || "Ítem"} vinculado a la validación (reubicado a esta área)`,
+      "success"
+    );
+    // El agregado creó un lote o reubicó uno existente — refrescar el listado.
+    fetchInventory();
   };
 
   const handleOpenVerifyDialog = (item: InventoryValidationItem) => {
@@ -663,7 +690,18 @@ export default function InventoryValidationsPage() {
                   {activeValidation.items.length} items verificados
                 </Typography>
               </Box>
-              <Box sx={{ display: "flex", gap: 1 }}>
+              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                {activeValidation.type === "area" && (
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={() => setOpenAddItemDialog(true)}
+                  >
+                    Agregar ítem
+                  </Button>
+                )}
                 <Button
                   variant="contained"
                   color="primary"
@@ -890,15 +928,21 @@ export default function InventoryValidationsPage() {
                           />
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant={item.status !== "pending" ? "outlined" : "contained"}
-                            size="small"
-                            color={item.status !== "pending" ? "success" : "primary"}
-                            onClick={() => handleOpenVerifyDialog(item)}
-                            startIcon={item.status !== "pending" ? <EditIcon /> : <VerifiedIcon />}
-                          >
-                            {item.status !== "pending" ? "Editar" : "Verificar"}
-                          </Button>
+                          {/* Un ítem 'added' nace verificado (el lote ya se creó con la
+                              cantidad contada) — no se re-verifica desde aquí. */}
+                          {item.status === "added" ? (
+                            "—"
+                          ) : (
+                            <Button
+                              variant={item.status !== "pending" ? "outlined" : "contained"}
+                              size="small"
+                              color={item.status !== "pending" ? "success" : "primary"}
+                              onClick={() => handleOpenVerifyDialog(item)}
+                              startIcon={item.status !== "pending" ? <EditIcon /> : <VerifiedIcon />}
+                            >
+                              {item.status !== "pending" ? "Editar" : "Verificar"}
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -927,6 +971,20 @@ export default function InventoryValidationsPage() {
         onClose={() => setOpenVerifyDialog(false)}
         onSubmit={handleVerifyItem}
       />
+
+      {activeValidation?.type === "area" && (
+        <AddItemDialog
+          open={openAddItemDialog}
+          areaName={activeValidation.area_name || "área en validación"}
+          products={products}
+          inventory={inventory}
+          existingInventoryIds={activeValidation.items
+            .map((i) => i.inventory_id)
+            .filter((id): id is number => id !== null)}
+          onClose={() => setOpenAddItemDialog(false)}
+          onSubmit={handleAddItem}
+        />
+      )}
 
       {confirmDialog}
 

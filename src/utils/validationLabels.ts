@@ -9,10 +9,11 @@ export const VALIDATION_TYPE_LABELS: Record<ValidationType, string> = {
 
 export const VALIDATION_ITEM_STATUS_LABELS: Record<
   ValidationItemStatus,
-  { label: string; color: "default" | "success" | "warning" | "error" }
+  { label: string; color: "default" | "success" | "warning" | "error" | "info" }
 > = {
   pending: { label: "PENDIENTE", color: "default" },
   confirmed: { label: "VERIFICADO OK", color: "success" },
   inconsistent: { label: "INCONSISTENCIA", color: "warning" },
   not_found: { label: "NO ENCONTRADO", color: "error" },
+  added: { label: "AGREGADO", color: "info" },
 };

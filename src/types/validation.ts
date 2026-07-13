@@ -1,6 +1,9 @@
 export type ValidationType = 'area' | 'expiring' | 'expired' | 'low_stock';
 export type ValidationStatus = 'in_progress' | 'completed' | 'cancelled';
-export type ValidationItemStatus = 'pending' | 'confirmed' | 'inconsistent' | 'not_found';
+// 'added': lote registrado durante la propia validación (producto encontrado
+// físicamente que no estaba en el snapshot); nace verificado y no requiere
+// ajuste posterior.
+export type ValidationItemStatus = 'pending' | 'confirmed' | 'inconsistent' | 'not_found' | 'added';
 
 export const DISCREPANCY_REASONS = ['vencido', 'dañado', 'merma', 'error_conteo', 'otro'] as const;
 export type DiscrepancyReason = typeof DISCREPANCY_REASONS[number];
@@ -50,6 +53,23 @@ export interface InventoryValidationItem {
 export interface InventoryValidationWithItems extends InventoryValidation {
   items: InventoryValidationItem[];
 }
+
+// Entrada de POST /api/inventory-validations/[id]/items — agregar un producto
+// encontrado físicamente durante una validación de área en progreso.
+// 'link':   vincula un lote existente (si está en otra área, se reubica).
+// 'create': crea el lote en el área validada con la cantidad contada.
+export type AddValidationItemInput =
+  | { mode: 'link'; inventory_id: number; notes?: string }
+  | {
+      mode: 'create';
+      product_id: number;
+      batch_number?: string | null;
+      expiry_date?: string | null;
+      quantity_available: number;
+      purchase_price?: number;
+      sale_price?: number;
+      notes?: string;
+    };
 
 export interface ValidationAdjustmentApplied {
   inventory_id: number;

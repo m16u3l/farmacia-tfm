@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { validationService } from '@/services/validationService';
-import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
+import { AddValidationItemInput, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
 
 export const useValidations = () => {
   const [loading, setLoading] = useState(false);
@@ -37,6 +37,22 @@ export const useValidations = () => {
     setError(null);
     try {
       return await validationService.createSession(data);
+    } catch (err) {
+      setError((err as Error).message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addItem = async (
+    validationId: number,
+    data: AddValidationItemInput
+  ): Promise<InventoryValidationItem | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      return await validationService.addItem(validationId, data);
     } catch (err) {
       setError((err as Error).message);
       return null;
@@ -120,6 +136,7 @@ export const useValidations = () => {
     getAll,
     getSession,
     createSession,
+    addItem,
     verifyItem,
     completeSession,
     cancelSession,

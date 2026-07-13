@@ -69,6 +69,15 @@ export async function POST(request: NextRequest) {
       sale_price
     } = data;
 
+    // Un lote sin área queda fuera de las validaciones por área y del estado
+    // de cobertura — si aún no tiene ubicación real, usar "Por clasificar".
+    if (!area_id) {
+      return NextResponse.json(
+        { error: "La ubicación es obligatoria" },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     const session = await getSessionFromRequest(request);
     const client = await pool.connect();
     try {
@@ -78,7 +87,7 @@ export async function POST(request: NextRequest) {
           area_id, purchase_price, sale_price, created_by
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *`,
-        [product_id, batch_number, expiry_date, quantity_available, area_id || null, purchase_price, sale_price, session?.userId ?? null]
+        [product_id, batch_number, expiry_date, quantity_available, area_id, purchase_price, sale_price, session?.userId ?? null]
       );
 
       await logAudit(session?.userId ?? null, "create", "inventory", result.rows[0].inventory_id, { product_id, quantity_available });

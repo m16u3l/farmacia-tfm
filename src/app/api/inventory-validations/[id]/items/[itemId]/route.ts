@@ -33,6 +33,17 @@ export async function PUT(
       }
       const item = itemResult.rows[0];
 
+      // Un ítem 'added' nace verificado (expected 0 / actual contado, con el
+      // lote ya creado con la cantidad real) — recalcular su estado contra
+      // expected_quantity=0 lo marcaría como falsa inconsistencia. Un error al
+      // agregarlo se corrige editando el lote desde el módulo de inventario.
+      if (item.status === "added") {
+        return NextResponse.json(
+          { error: "Los ítems agregados durante la validación no se re-verifican" },
+          { status: 409 }
+        );
+      }
+
       let status: "confirmed" | "inconsistent" | "not_found";
       if (actual_quantity === item.expected_quantity) {
         // Coincide con lo esperado — incluye el caso expected=0/actual=0 (un

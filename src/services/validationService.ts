@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
+import { AddValidationItemInput, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
 
 export const validationService = {
   async createSession(data: { type: ValidationType; area_id?: number; notes?: string }): Promise<InventoryValidationWithItems> {
@@ -15,6 +15,13 @@ export const validationService = {
 
   async getAll(status?: string): Promise<InventoryValidation[]> {
     return apiRequest<InventoryValidation[]>(`/api/inventory-validations${status ? `?status=${status}` : ''}`);
+  },
+
+  async addItem(validationId: number, data: AddValidationItemInput): Promise<InventoryValidationItem> {
+    return apiRequest<InventoryValidationItem>(`/api/inventory-validations/${validationId}/items`, {
+      method: 'POST',
+      body: data
+    });
   },
 
   async verifyItem(validationId: number, itemId: number, data: { actual_quantity: number; actual_expiry_date?: string | null; notes?: string; discrepancy_reason?: DiscrepancyReason | null }): Promise<InventoryValidationItem> {

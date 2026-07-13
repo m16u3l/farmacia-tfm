@@ -101,10 +101,9 @@ export function InventoryForm({
                 fullWidth
                 value={formData.area_id ?? ""}
                 onChange={(e) => onChange("area_id", e.target.value ? parseInt(e.target.value) : null)}
+                required
+                helperText='Si aún no tiene ubicación definida, usa "Por clasificar"'
               >
-                <MenuItem value="">
-                  <em>Sin asignar</em>
-                </MenuItem>
                 {areaOptions.map(({ area, depth, label }) => (
                   <MenuItem key={area.area_id} value={area.area_id} sx={{ pl: 2 + depth * 2 }}>
                     {label}

@@ -62,6 +62,15 @@ export async function PUT(
       sale_price
     } = data;
 
+    // Un lote sin área queda fuera de las validaciones por área y del estado
+    // de cobertura — si aún no tiene ubicación real, usar "Por clasificar".
+    if (!area_id) {
+      return NextResponse.json(
+        { error: "La ubicación es obligatoria" },
+        { status: 400 }
+      );
+    }
+
     const client = await pool.connect();
     try {
       // Una edición manual del vencimiento se considera confirmada (ya no aproximada)
@@ -72,7 +81,7 @@ export async function PUT(
              sale_price = $7, expiry_is_approximate = FALSE
          WHERE inventory_id = $8
          RETURNING *`,
-        [product_id, batch_number, expiry_date, quantity_available, area_id || null, purchase_price, sale_price, params.id]
+        [product_id, batch_number, expiry_date, quantity_available, area_id, purchase_price, sale_price, params.id]
       );
 
       if (result.rows.length === 0) {

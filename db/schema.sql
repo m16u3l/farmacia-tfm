@@ -131,7 +131,10 @@ CREATE TABLE IF NOT EXISTS inventory (
   quantity_available       INTEGER NOT NULL DEFAULT 0 CHECK (quantity_available >= 0),
   -- SET NULL (no RESTRICT): borrar un área no debe bloquearse solo por stock
   -- histórico; la API bloquea el DELETE de áreas con inventario activo antes
-  -- de llegar a este punto.
+  -- de llegar a este punto. La columna sigue siendo nullable solo por ese caso:
+  -- la API exige un área al crear/editar inventario (ver área "Por clasificar"
+  -- en los datos iniciales), porque un lote sin área queda fuera de las
+  -- validaciones por área y del estado de cobertura.
   area_id                   INTEGER REFERENCES inventory_areas(area_id) ON DELETE SET NULL,
   purchase_price            NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (purchase_price >= 0),
   sale_price                NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (sale_price >= 0),
@@ -383,8 +386,12 @@ CREATE TABLE IF NOT EXISTS inventory_validation_items (
   -- vivo de inventory.expiry_date (igual que expiry_date en general no se
   -- snapshotea, a diferencia de expected_quantity).
   actual_expiry_date   DATE,
+  -- 'added': lote registrado durante la propia validación (producto encontrado
+  -- físicamente que no estaba en el snapshot). Nace con expected_quantity = 0 y
+  -- actual_quantity = lo contado; el lote de inventario ya se crea con la
+  -- cantidad real, así que no requiere ajuste posterior.
   status               VARCHAR(20) NOT NULL DEFAULT 'pending'
-                       CHECK (status IN ('pending', 'confirmed', 'inconsistent', 'not_found')),
+                       CHECK (status IN ('pending', 'confirmed', 'inconsistent', 'not_found', 'added')),
   -- Motivo estructurado de la discrepancia (cuando status es inconsistent/not_found).
   -- "notes" queda para detalle adicional en texto libre.
   discrepancy_reason   VARCHAR(20)
@@ -407,6 +414,15 @@ BEGIN;
 
 INSERT INTO configuracion (low_stock_threshold, expiry_alert_days) VALUES (10, 40)
 ON CONFLICT DO NOTHING;
+
+-- Área comodín para stock aún sin ubicación física asignada. La API exige un
+-- área al crear/editar inventario, así que siempre debe existir al menos esta.
+INSERT INTO inventory_areas (name, type, parent_area_id)
+SELECT 'Por clasificar', 'otro', NULL
+WHERE NOT EXISTS (
+  SELECT 1 FROM inventory_areas
+  WHERE name = 'Por clasificar' AND parent_area_id IS NULL
+);
 
 -- -----------------------------------------------------------------------------
 -- Usuarios iniciales — UNA CUENTA POR ROL, para que puedas entrar por primera

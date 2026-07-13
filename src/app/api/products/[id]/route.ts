@@ -88,6 +88,17 @@ export async function DELETE(
       client.release();
     }
   } catch (error) {
+    // 23503: violación de FK — el producto tiene lotes de inventario u otras
+    // referencias (ON DELETE RESTRICT).
+    if ((error as { code?: string }).code === "23503") {
+      return NextResponse.json(
+        {
+          error:
+            "No se puede eliminar el producto porque tiene inventario u otros registros asociados. Desactívalo en su lugar.",
+        },
+        { status: 409 }
+      );
+    }
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
