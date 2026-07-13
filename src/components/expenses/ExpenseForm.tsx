@@ -6,7 +6,9 @@ import {
   TextField,
   Button,
   MenuItem,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { ExpenseFormData, EXPENSE_CATEGORY_LABELS, ExpenseCategory } from "@/types";
 
 interface ExpenseFormProps {
@@ -26,6 +28,7 @@ export function ExpenseForm({
   onSubmit,
   onChange,
 }: ExpenseFormProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
@@ -35,7 +38,7 @@ export function ExpenseForm({
   const categoryLocked = formData.order_id !== null;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{isEditing ? "Editar gasto" : "Registrar gasto"}</DialogTitle>
         <DialogContent>

@@ -9,7 +9,9 @@ import {
   FormControlLabel,
   Switch,
   Grid,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import {
   ProductFormData,
   DOSAGE_FORMS,
@@ -27,7 +29,7 @@ interface ProductFormProps {
   formData: ProductFormData;
   onClose: () => void;
   onSubmit: (data: ProductFormData) => void;
-  onChange: (field: keyof ProductFormData, value: string | number | boolean) => void;
+  onChange: (field: keyof ProductFormData, value: string | number | boolean | null) => void;
 }
 
 export function ProductForm({
@@ -38,13 +40,14 @@ export function ProductForm({
   onSubmit,
   onChange,
 }: ProductFormProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
           {isEditing ? "Editar Producto" : "Nuevo Producto"}
@@ -217,6 +220,23 @@ export function ProductForm({
                   </MenuItem>
                 ))}
               </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Umbral de bajo stock"
+                fullWidth
+                type="number"
+                inputProps={{ min: 0 }}
+                placeholder="Usar umbral global"
+                helperText="Opcional. Vacío = usar el umbral global de Configuración."
+                value={formData.low_stock_threshold ?? ""}
+                onChange={(e) =>
+                  onChange(
+                    "low_stock_threshold",
+                    e.target.value === "" ? null : Number(e.target.value)
+                  )
+                }
+              />
             </Grid>
             <Grid item xs={12}>
               <TextField

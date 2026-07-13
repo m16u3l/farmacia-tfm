@@ -31,4 +31,7 @@ export interface SellItem {
 export interface SellFormData {
   payment_method: PaymentMethod;
   items?: SellItem[];
+  // Confirmación explícita del cajero para vender un lote aunque exista otro
+  // del mismo producto que vence antes (override de la regla FEFO del servidor).
+  fefo_confirmed?: boolean;
 }

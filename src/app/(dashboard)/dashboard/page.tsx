@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Paper, Typography, Grid, Card, CardActionArea, CardContent } from "@mui/material";
+import { Box, Paper, Typography, Grid, Card, CardActionArea, CardContent, Skeleton } from "@mui/material";
 import StorefrontIcon from "@mui/icons-material/StorefrontOutlined";
 import InventoryIcon from "@mui/icons-material/Inventory2Outlined";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSaleOutlined";
@@ -34,38 +34,21 @@ export default function DashboardHomePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [productsRes, inventoryRes, sellsRes, ordersRes, coverageRes] = await Promise.all([
-          fetch("/api/products"),
-          fetch("/api/inventory"),
-          fetch("/api/sells"),
-          fetch("/api/orders"),
+        const [statsRes, coverageRes] = await Promise.all([
+          fetch("/api/dashboard/stats"),
           // 403 para roles sin acceso a inventory-validations: la tarjeta se oculta.
           fetch("/api/inventory-validations/coverage"),
         ]);
-        const [products, inventory, sells, orders, coverage] = await Promise.all([
-          productsRes.ok ? productsRes.json() : [],
-          inventoryRes.ok ? inventoryRes.json() : [],
-          sellsRes.ok ? sellsRes.json() : [],
-          ordersRes.ok ? ordersRes.json() : [],
+        const [data, coverage] = await Promise.all([
+          statsRes.ok ? statsRes.json() : null,
           coverageRes.ok ? coverageRes.json() : null,
         ]);
 
-        const today = new Date().toISOString().slice(0, 10);
-        const lowStock = Array.isArray(inventory)
-          ? inventory.filter((i) => Number(i.quantity_available) <= 10).length
-          : 0;
-        const sellsToday = Array.isArray(sells)
-          ? sells.filter((s) => String(s.sell_date).slice(0, 10) === today).length
-          : 0;
-        const pendingOrders = Array.isArray(orders)
-          ? orders.filter((o) => o.status === "pendiente").length
-          : 0;
-
         setStats({
-          products: Array.isArray(products) ? products.length : 0,
-          lowStock,
-          sellsToday,
-          pendingOrders,
+          products: data?.products ?? 0,
+          lowStock: data?.low_stock_lots ?? 0,
+          sellsToday: data?.sells_today ?? 0,
+          pendingOrders: data?.pending_orders ?? 0,
           validationCoverage:
             coverage && typeof coverage.coverage_percent === "number"
               ? coverage.coverage_percent
@@ -152,7 +135,7 @@ export default function DashboardHomePage() {
                       {card.icon}
                     </Box>
                     <Typography variant="h4" sx={{ fontSize: "1.75rem" }}>
-                      {loading ? "…" : card.value}
+                      {loading ? <Skeleton width={56} /> : card.value}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {card.label}

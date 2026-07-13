@@ -9,7 +9,9 @@ import {
   Grid,
   FormControlLabel,
   Checkbox,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { AREA_TYPES, InventoryArea, InventoryAreaFormData } from "@/types";
 import { buildAreaOptions } from "@/utils/areaTree";
 
@@ -34,6 +36,7 @@ export function AreaForm({
   onSubmit,
   onChange,
 }: AreaFormProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const parentOptions = buildAreaOptions(areas, editingAreaId ?? undefined);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -42,7 +45,7 @@ export function AreaForm({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>{isEditing ? "Editar Área" : "Nueva Área"}</DialogTitle>
         <DialogContent>

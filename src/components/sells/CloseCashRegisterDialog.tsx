@@ -11,7 +11,9 @@ import {
   CircularProgress,
   Checkbox,
   FormControlLabel,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { useState, useEffect } from "react";
 import { PendingClosureSummary } from "@/types";
 
@@ -28,6 +30,7 @@ export function CloseCashRegisterDialog({
   onConfirm,
   getPendingSummary,
 }: CloseCashRegisterDialogProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [summary, setSummary] = useState<PendingClosureSummary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [countedCash, setCountedCash] = useState("");
@@ -73,7 +76,7 @@ export function CloseCashRegisterDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Cerrar caja</DialogTitle>
       <DialogContent>
         {loadingSummary && (

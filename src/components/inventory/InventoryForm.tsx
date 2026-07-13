@@ -7,7 +7,9 @@ import {
   Button,
   MenuItem,
   Grid,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { InventoryArea, InventoryFormData, Product } from "@/types";
 import { buildAreaOptions } from "@/utils/areaTree";
 
@@ -32,6 +34,7 @@ export function InventoryForm({
   onSubmit,
   onChange,
 }: InventoryFormProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const areaOptions = buildAreaOptions(areas);
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +42,7 @@ export function InventoryForm({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
           {isEditing ? "Editar Inventario" : "Nuevo Item de Inventario"}

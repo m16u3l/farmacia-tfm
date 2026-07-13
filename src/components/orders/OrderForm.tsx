@@ -6,7 +6,9 @@ import {
   TextField,
   Button,
   Autocomplete,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { OrderFormData, Product } from "@/types";
 import { useState, useEffect } from "react";
 
@@ -27,6 +29,7 @@ export function OrderForm({
   onSubmit,
   onChange,
 }: OrderFormProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
@@ -62,7 +65,7 @@ export function OrderForm({
   );
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
           {isEditing ? "Editar solicitud" : "Reportar producto faltante"}

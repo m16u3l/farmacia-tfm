@@ -77,6 +77,8 @@ CREATE TABLE IF NOT EXISTS products (
   --               controlado (control especial — antibióticos, psicotrópicos)
   sale_control          VARCHAR(20) NOT NULL DEFAULT 'libre'
                         CHECK (sale_control IN ('libre', 'receta', 'controlado')),
+  -- Umbral de bajo stock propio del producto; NULL = usar el global de configuracion
+  low_stock_threshold   INTEGER CHECK (low_stock_threshold IS NULL OR low_stock_threshold >= 0),
   status                BOOLEAN NOT NULL DEFAULT TRUE,
   created_by            INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at            TIMESTAMP NOT NULL DEFAULT NOW()
@@ -316,6 +318,9 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   source_area_id            INTEGER REFERENCES inventory_areas(area_id) ON DELETE SET NULL,
   destination_area_id       INTEGER REFERENCES inventory_areas(area_id) ON DELETE SET NULL,
   quantity                  INTEGER NOT NULL CHECK (quantity > 0),
+  -- Motivo estructurado del movimiento (auditable); "notes" queda para detalle libre
+  reason                    VARCHAR(20)
+                            CHECK (reason IN ('reposicion', 'reubicacion', 'vencido', 'dañado', 'otro')),
   notes                     TEXT,
   moved_by                  INTEGER REFERENCES users(id) ON DELETE SET NULL,
   moved_at                  TIMESTAMP NOT NULL DEFAULT NOW()

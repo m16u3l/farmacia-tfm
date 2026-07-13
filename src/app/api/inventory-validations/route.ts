@@ -12,7 +12,11 @@ const ITEM_FILTERS: Record<string, (thresholds: ConfiguracionThresholds) => stri
   expiring: ({ expiry_alert_days }) =>
     `i.expiry_date IS NOT NULL AND i.expiry_date >= CURRENT_DATE AND i.expiry_date <= CURRENT_DATE + INTERVAL '${expiry_alert_days} days'`,
   expired: () => "i.expiry_date IS NOT NULL AND i.expiry_date < CURRENT_DATE",
-  low_stock: ({ low_stock_threshold }) => `i.quantity_available <= ${low_stock_threshold}`,
+  low_stock: ({ low_stock_threshold }) =>
+    `i.quantity_available <= COALESCE(
+       (SELECT p.low_stock_threshold FROM products p WHERE p.product_id = i.product_id),
+       ${low_stock_threshold}
+     )`,
 };
 
 export async function GET(request: NextRequest) {

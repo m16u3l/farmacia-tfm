@@ -47,6 +47,7 @@ export async function PUT(
       dosage_instructions,
       barcode,
       sale_control,
+      low_stock_threshold,
       status,
     } = body;
     const client = await pool.connect();
@@ -55,9 +56,10 @@ export async function PUT(
         `UPDATE products
          SET name = $1, description = $2, possible_uses = $3, additional_info = $4, laboratory = $5, active_ingredient = $6,
              concentration = $7, health_registry = $8, category = $9, type = $10,
-             dosage_form = $11, unit = $12, dosage_instructions = $13, barcode = $14, sale_control = $15, status = $16
-         WHERE product_id = $17`,
-        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, sale_control ?? "libre", status, params.id]
+             dosage_form = $11, unit = $12, dosage_instructions = $13, barcode = $14, sale_control = $15,
+             low_stock_threshold = $16, status = $17
+         WHERE product_id = $18`,
+        [name, description, possible_uses ?? null, additional_info ?? null, laboratory ?? null, active_ingredient ?? null, concentration ?? null, health_registry ?? null, category, type, dosage_form, unit, dosage_instructions ?? null, barcode, sale_control ?? "libre", low_stock_threshold ?? null, status, params.id]
       );
       const session = await getSessionFromRequest(request);
       await logAudit(session?.userId ?? null, "update", "product", Number(params.id), { name });

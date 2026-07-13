@@ -6,7 +6,9 @@ import {
   TextField,
   Button,
   Grid,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { EmployeeFormData } from "@/types";
 
 interface EmployeeFormProps {
@@ -26,13 +28,14 @@ export function EmployeeForm({
   onSubmit,
   onChange,
 }: EmployeeFormProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>
           {isEditing ? "Editar Empleado" : "Nuevo Empleado"}

@@ -24,3 +24,16 @@ export interface Inventory {
 }
 
 export type InventoryFormData = Omit<Inventory, 'inventory_id' | 'product'>;
+
+// Motivo estructurado de una transferencia entre áreas (inventory_movements.reason),
+// análogo al discrepancy_reason de las validaciones.
+export const TRANSFER_REASONS = ['reposicion', 'reubicacion', 'vencido', 'dañado', 'otro'] as const;
+export type TransferReason = typeof TRANSFER_REASONS[number];
+
+export const TRANSFER_REASON_LABELS: Record<TransferReason, string> = {
+  reposicion: 'Reposición (surtir área de venta)',
+  reubicacion: 'Reubicación / reorganización',
+  vencido: 'Producto vencido (retiro)',
+  dañado: 'Producto dañado (retiro)',
+  otro: 'Otro',
+};

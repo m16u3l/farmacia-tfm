@@ -10,7 +10,9 @@ import {
   Switch,
   Alert,
   Grid,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import { UserFormData, UserRole } from "@/types/user";
 import { Employee } from "@/types/employee";
 import { ROLE_LABELS } from "@/lib/permissions";
@@ -34,8 +36,9 @@ export function UserForm({
   onSubmit,
   onChange,
 }: UsuarioFormProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={onSubmit}>
         <DialogTitle>
           {isEditing ? "Editar Usuario" : "Nuevo Usuario"}

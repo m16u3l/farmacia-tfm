@@ -31,7 +31,12 @@ export function useSells() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error("Error al crear la venta");
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw Object.assign(new Error(body?.error || "Error al crear la venta"), {
+          fefoConflict: body?.fefo_conflict === true,
+        });
+      }
       await fetchSells();
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Error desconocido"));
@@ -47,7 +52,10 @@ export function useSells() {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error("Error al actualizar la venta");
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error || "Error al actualizar la venta");
+      }
       await fetchSells();
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Error desconocido"));

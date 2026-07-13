@@ -119,7 +119,7 @@ describe('inventoryService', () => {
 
   describe('transfer', () => {
     it('should transfer an inventory item to another area', async () => {
-      const transferData = { destination_area_id: 2, quantity: 5, notes: 'Reposición de estante' }
+      const transferData = { destination_area_id: 2, quantity: 5, reason: 'reposicion' as const, notes: 'Reposición de estante' }
       const mockTransferredItem = { ...mockInventory, quantity_available: 95 }
       mockApiRequest.mockResolvedValue(mockTransferredItem)
 

@@ -12,11 +12,19 @@ export async function POST(
 
   try {
     const data = await request.json();
-    const { destination_area_id, quantity, notes } = data;
+    const { destination_area_id, quantity, reason, notes } = data;
 
     if (!destination_area_id || !quantity || quantity <= 0) {
       return NextResponse.json(
         { error: "Área destino y cantidad (mayor a 0) son obligatorios" },
+        { status: 400 }
+      );
+    }
+
+    const VALID_REASONS = ["reposicion", "reubicacion", "vencido", "dañado", "otro"];
+    if (!reason || !VALID_REASONS.includes(reason)) {
+      return NextResponse.json(
+        { error: "El motivo de la transferencia es obligatorio" },
         { status: 400 }
       );
     }
@@ -115,10 +123,10 @@ export async function POST(
       const movement = await client.query(
         `INSERT INTO inventory_movements (
           source_inventory_id, destination_inventory_id, source_area_id,
-          destination_area_id, quantity, notes, moved_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          destination_area_id, quantity, reason, notes, moved_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *`,
-        [sourceId, destinationId, source.area_id, destination_area_id, quantity, notes || null, session?.userId ?? null]
+        [sourceId, destinationId, source.area_id, destination_area_id, quantity, reason, notes || null, session?.userId ?? null]
       );
 
       await client.query("COMMIT");

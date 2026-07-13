@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { Inventory, InventoryFormData } from '@/types';
+import { Inventory, InventoryFormData, TransferReason } from '@/types';
 
 export const inventoryService = {
   async getAll(): Promise<Inventory[]> {
@@ -38,7 +38,7 @@ export const inventoryService = {
     return apiRequest<Inventory[]>(`/api/inventory?low_stock=${threshold}`);
   },
 
-  async transfer(id: number, data: { destination_area_id: number; quantity: number; notes?: string }): Promise<Inventory> {
+  async transfer(id: number, data: { destination_area_id: number; quantity: number; reason: TransferReason; notes?: string }): Promise<Inventory> {
     return apiRequest<Inventory>(`/api/inventory/${id}/transfer`, {
       method: 'POST',
       body: data

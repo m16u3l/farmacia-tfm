@@ -17,7 +17,9 @@ import {
   TableRow,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import DownloadIcon from "@mui/icons-material/Download";
 import BuildIcon from "@mui/icons-material/Build";
 import {
@@ -44,6 +46,7 @@ interface HistoryTabProps {
 }
 
 export function HistoryTab({ areas, onNotify }: HistoryTabProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const { getAll, getSession, applyAdjustments } = useValidations();
   const [sessions, setSessions] = useState<InventoryValidation[]>([]);
   const [typeFilter, setTypeFilter] = useState<ValidationType | "all">("all");
@@ -242,7 +245,7 @@ export function HistoryTab({ areas, onNotify }: HistoryTabProps) {
         </Table>
       </TableContainer>
 
-      <Dialog open={detail !== null} onClose={() => setDetail(null)} maxWidth="md" fullWidth>
+      <Dialog fullScreen={fullScreen} open={detail !== null} onClose={() => setDetail(null)} maxWidth="md" fullWidth>
         <DialogTitle>
           {detail && `${VALIDATION_TYPE_LABELS[detail.type]}${detail.area_name ? ` — ${detail.area_name}` : ""}`}
         </DialogTitle>

@@ -29,6 +29,7 @@ import { ProductForm } from "@/components/products/ProductForm";
 import { useProducts } from "@/hooks/useProducts";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { fluidFontSize } from "@/utils/fluidType";
 
 export default function ProductsPage() {
@@ -52,6 +53,7 @@ export default function ProductsPage() {
     unit: "",
     barcode: "",
     sale_control: "libre",
+    low_stock_threshold: null,
     status: true
   });
   const [snackbar, setSnackbar] = useState({
@@ -104,6 +106,7 @@ export default function ProductsPage() {
       unit: product.unit ?? "",
       barcode: product.barcode ?? "",
       sale_control: product.sale_control ?? "libre",
+      low_stock_threshold: product.low_stock_threshold ?? null,
       status: product.status
     });
     setIsEditing(true);
@@ -136,7 +139,7 @@ export default function ProductsPage() {
 
   const handleFormChange = (
     field: keyof ProductFormData,
-    value: string | number | boolean
+    value: string | number | boolean | null
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -185,6 +188,7 @@ export default function ProductsPage() {
       unit: "",
       barcode: "",
       sale_control: "libre",
+      low_stock_threshold: null,
       status: true
     });
     setIsEditing(false);
@@ -304,6 +308,15 @@ export default function ProductsPage() {
         />
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay productos registrados todavía"
+                  actionLabel="Nuevo producto"
+                  onAction={() => { resetForm(); setOpenDialog(true); }}
+                />
+              ),
+            }}
             rows={products}
             columns={columns}
             getRowId={(row) => row.product_id}
@@ -340,6 +353,7 @@ export default function ProductsPage() {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "--DataGrid-overlayHeight": "220px",
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
               },
@@ -365,6 +379,7 @@ export default function ProductsPage() {
       />
 
       <Dialog
+        fullScreen={isMobile}
         open={detailProduct !== null}
         onClose={() => setDetailProduct(null)}
         maxWidth="sm"
@@ -460,7 +475,7 @@ export default function ProductsPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snackbar.severity}

@@ -27,12 +27,13 @@ import EventBusyIcon from "@mui/icons-material/EventBusy";
 import InventoryIconOutlined from "@mui/icons-material/Inventory2Outlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import SearchIcon from "@mui/icons-material/Search";
-import { Inventory, InventoryArea, InventoryFormData, Product } from "@/types";
+import { Inventory, InventoryArea, InventoryFormData, Product, TransferReason } from "@/types";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { TransferDialog } from "@/components/inventory/TransferDialog";
 import { useInventory } from "@/hooks/useInventory";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { buildAreaOptions } from "@/utils/areaTree";
 import { fluidFontSize } from "@/utils/fluidType";
 
@@ -158,7 +159,7 @@ export default function InventoryPage() {
     setTransferItem(item);
   };
 
-  const handleTransfer = async (data: { destination_area_id: number; quantity: number; notes?: string }) => {
+  const handleTransfer = async (data: { destination_area_id: number; quantity: number; reason: TransferReason; notes?: string }) => {
     if (!transferItem) return;
     const result = await transferInventoryItem(transferItem.inventory_id, data);
     if (result) {
@@ -639,6 +640,15 @@ export default function InventoryPage() {
 
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay lotes de inventario todavía"
+                  actionLabel="Agregar lote"
+                  onAction={handleAdd}
+                />
+              ),
+            }}
             rows={visibleInventory}
             columns={columns}
             getRowId={(row) => row.inventory_id}
@@ -669,6 +679,7 @@ export default function InventoryPage() {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "--DataGrid-overlayHeight": "220px",
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
               },
@@ -707,7 +718,7 @@ export default function InventoryPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snackbar.severity}

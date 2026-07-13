@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { inventoryService } from '@/services/inventoryService';
-import { Inventory, InventoryFormData } from '@/types';
+import { Inventory, InventoryFormData, TransferReason } from '@/types';
 
 export const useInventory = () => {
   const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ export const useInventory = () => {
 
   const transferInventoryItem = async (
     id: number,
-    data: { destination_area_id: number; quantity: number; notes?: string }
+    data: { destination_area_id: number; quantity: number; reason: TransferReason; notes?: string }
   ): Promise<Inventory | null> => {
     setLoading(true);
     setError(null);

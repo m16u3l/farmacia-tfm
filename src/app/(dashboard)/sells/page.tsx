@@ -32,6 +32,7 @@ import { useCashRegisterClosures } from "@/hooks/useCashRegisterClosures";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { fluidFontSize } from "@/utils/fluidType";
 
 export default function SellsPage() {
@@ -124,7 +125,21 @@ export default function SellsPage() {
           severity: "success",
         });
       } else {
-        await createSell(data);
+        try {
+          await createSell(data);
+        } catch (error) {
+          // Regla FEFO del servidor: hay otro lote del mismo producto que
+          // vence antes. El cajero puede confirmar y vender el elegido igual.
+          if (!(error as { fefoConflict?: boolean }).fefoConflict) throw error;
+          const confirmed = await confirm({
+            title: "Hay un lote que vence antes",
+            message: `${(error as Error).message}`,
+            confirmLabel: "Vender de todos modos",
+            confirmColor: "primary",
+          });
+          if (!confirmed) return;
+          await createSell({ ...data, fefo_confirmed: true });
+        }
         setSnackbar({
           open: true,
           message: "Venta creada exitosamente",
@@ -312,6 +327,15 @@ export default function SellsPage() {
 
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay ventas registradas todavía"
+                  actionLabel="Registrar venta"
+                  onAction={() => { resetForm(); setOpenDialog(true); }}
+                />
+              ),
+            }}
             rows={visibleSells}
             columns={columns}
             getRowId={(row) => row.sell_id}
@@ -333,6 +357,7 @@ export default function SellsPage() {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "--DataGrid-overlayHeight": "220px",
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
               },
@@ -410,7 +435,7 @@ export default function SellsPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snackbar.severity}

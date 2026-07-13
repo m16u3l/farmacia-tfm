@@ -22,6 +22,7 @@ import { useSuppliers } from "@/hooks/useSuppliers";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { fluidFontSize } from "@/utils/fluidType";
 
 export default function SuppliersPage() {
@@ -219,6 +220,15 @@ export default function SuppliersPage() {
         />
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay proveedores registrados todavía"
+                  actionLabel={isAdmin ? "Nuevo proveedor" : undefined}
+                  onAction={isAdmin ? () => { resetForm(); setOpenDialog(true); } : undefined}
+                />
+              ),
+            }}
             rows={suppliers}
             columns={columns}
             getRowId={(row) => row.supplier_id}
@@ -243,6 +253,7 @@ export default function SuppliersPage() {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "--DataGrid-overlayHeight": "220px",
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
               },
@@ -271,7 +282,7 @@ export default function SuppliersPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snackbar.severity}

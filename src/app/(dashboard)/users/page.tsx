@@ -23,6 +23,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useUsers } from "@/hooks/useUsers";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { fluidFontSize } from "@/utils/fluidType";
 import Chip from "@mui/material/Chip";
 import Alert from "@mui/material/Alert";
@@ -187,6 +188,15 @@ export default function UsersPage() {
 
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay usuarios registrados todavía"
+                  actionLabel="Nuevo usuario"
+                  onAction={() => { resetForm(); setOpenDialog(true); }}
+                />
+              ),
+            }}
             rows={users}
             columns={columns}
             getRowId={(row) => row.id}

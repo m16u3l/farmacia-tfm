@@ -22,6 +22,7 @@ import { Employee, EmployeeFormData } from "@/types/employee";
 import { useEmployees } from "@/hooks/useEmployees";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { fluidFontSize } from "@/utils/fluidType";
 
 function LoadingState() {
@@ -222,6 +223,15 @@ export default function EmployeesPage() {
         </Alert>
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay empleados registrados todavía"
+                  actionLabel="Nuevo empleado"
+                  onAction={() => { resetForm(); setOpenDialog(true); }}
+                />
+              ),
+            }}
             rows={employees}
             columns={columns}
             getRowId={(row) => row.employee_id}
@@ -248,6 +258,7 @@ export default function EmployeesPage() {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "--DataGrid-overlayHeight": "220px",
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
               },
@@ -271,7 +282,7 @@ export default function EmployeesPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snackbar.severity}

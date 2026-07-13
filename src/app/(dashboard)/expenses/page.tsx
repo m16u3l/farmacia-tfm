@@ -22,6 +22,7 @@ import { Expense, ExpenseFormData, EXPENSE_CATEGORY_LABELS } from "@/types";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { fluidFontSize } from "@/utils/fluidType";
 
 const emptyForm = (): ExpenseFormData => ({
@@ -271,6 +272,15 @@ export default function ExpensesPage() {
 
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay gastos registrados todavía"
+                  actionLabel="Registrar gasto"
+                  onAction={handleAdd}
+                />
+              ),
+            }}
             rows={expenses}
             columns={columns}
             getRowId={(row) => row.expense_id}
@@ -291,6 +301,7 @@ export default function ExpensesPage() {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "--DataGrid-overlayHeight": "220px",
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
                 display: "flex",
@@ -341,7 +352,7 @@ export default function ExpensesPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snackbar.severity}

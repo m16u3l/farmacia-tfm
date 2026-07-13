@@ -26,6 +26,7 @@ import { OrderForm } from "@/components/orders/OrderForm";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
+import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { fluidFontSize } from "@/utils/fluidType";
 
@@ -375,6 +376,15 @@ export default function OrdersPage() {
 
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
+            slots={{
+              noRowsOverlay: () => (
+                <GridEmptyState
+                  message="No hay solicitudes de reposición todavía"
+                  actionLabel="Nueva solicitud"
+                  onAction={handleAdd}
+                />
+              ),
+            }}
             rows={orders}
             columns={columns}
             getRowId={(row) => row.order_id}
@@ -395,6 +405,7 @@ export default function OrdersPage() {
                 backgroundColor: (theme) => theme.palette.action.hover,
               },
               "& .MuiDataGrid-overlay": { backgroundColor: "transparent" },
+              "--DataGrid-overlayHeight": "220px",
               "& .MuiDataGrid-cell": {
                 padding: { xs: '4px', sm: '8px' },
                 display: "flex",
@@ -460,7 +471,7 @@ export default function OrdersPage() {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           severity={snackbar.severity}

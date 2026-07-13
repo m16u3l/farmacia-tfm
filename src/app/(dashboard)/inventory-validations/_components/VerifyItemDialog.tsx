@@ -12,7 +12,9 @@ import {
   MenuItem,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { InventoryValidationItem, DiscrepancyReason, DISCREPANCY_REASONS, DISCREPANCY_REASON_LABELS } from "@/types";
 
@@ -45,6 +47,7 @@ const formatDateOnly = (dateOnly: string): string => {
 };
 
 export function VerifyItemDialog({ open, item, onClose, onSubmit }: VerifyItemDialogProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [quantityInput, setQuantityInput] = useState("");
   const [expiryInput, setExpiryInput] = useState("");
   const [notes, setNotes] = useState("");
@@ -84,7 +87,7 @@ export function VerifyItemDialog({ open, item, onClose, onSubmit }: VerifyItemDi
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Verificar Item de Inventario</DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 2 }}>

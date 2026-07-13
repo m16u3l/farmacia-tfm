@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
-    const { payment_method, items } = data;
+    const { payment_method, items, fefo_confirmed } = data;
     const session = await getSessionFromRequest(request);
     const client = await pool.connect();
 
@@ -88,8 +88,10 @@ export async function POST(request: NextRequest) {
         // lo dejen negativo (antes solo lo frenaba el CHECK >= 0 de Postgres,
         // con un error genérico en vez de "stock insuficiente").
         const invResult = await client.query(
-          `SELECT quantity_available, expiry_date, purchase_price
-           FROM inventory WHERE inventory_id = $1 FOR UPDATE`,
+          `SELECT i.quantity_available, i.expiry_date, i.purchase_price, i.product_id, p.name AS product_name
+           FROM inventory i
+           JOIN products p ON p.product_id = i.product_id
+           WHERE i.inventory_id = $1 FOR UPDATE OF i`,
           [item.inventory_id]
         );
 
@@ -99,7 +101,8 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        const { quantity_available, expiry_date, purchase_price } = invResult.rows[0];
+        const { quantity_available, expiry_date, purchase_price, product_id, product_name } =
+          invResult.rows[0];
 
         if (expiry_date && new Date(expiry_date) < new Date()) {
           throw Object.assign(
@@ -113,6 +116,38 @@ export async function POST(request: NextRequest) {
             new Error(`Stock insuficiente: solo quedan ${quantity_available} unidades disponibles`),
             { statusCode: 409 }
           );
+        }
+
+        // Regla FEFO: si existe otro lote del mismo producto, con stock y sin
+        // vencer, que vence antes que el elegido, la venta se rechaza salvo
+        // confirmación explícita del cajero (fefo_confirmed). Los lotes que ya
+        // vienen en el mismo carrito no cuentan como "pendientes de agotar".
+        if (!fefo_confirmed) {
+          const cartInventoryIds = (items as { inventory_id: number }[]).map(
+            (i) => i.inventory_id
+          );
+          const earlierLot = await client.query(
+            `SELECT i2.batch_number, i2.expiry_date
+             FROM inventory i2
+             WHERE i2.product_id = $1
+               AND i2.inventory_id <> ALL($2::int[])
+               AND i2.quantity_available > 0
+               AND i2.expiry_date IS NOT NULL
+               AND i2.expiry_date >= CURRENT_DATE
+               AND ($3::date IS NULL OR i2.expiry_date < $3::date)
+             ORDER BY i2.expiry_date
+             LIMIT 1`,
+            [product_id, cartInventoryIds, expiry_date]
+          );
+          if (earlierLot.rows.length > 0) {
+            const lot = earlierLot.rows[0];
+            throw Object.assign(
+              new Error(
+                `FEFO: de "${product_name}" existe otro lote${lot.batch_number ? ` (${lot.batch_number})` : ""} que vence antes y aún tiene stock. Vende ese lote primero, o confirma para continuar con el elegido.`
+              ),
+              { statusCode: 409, fefoConflict: true }
+            );
+          }
         }
 
         // unit_cost congela el precio de compra vigente: la ganancia histórica
@@ -151,7 +186,11 @@ export async function POST(request: NextRequest) {
       // Confirmar la transacción
       await client.query('COMMIT');
 
-      await logAudit(session?.userId ?? null, "create", "sell", sellId, { total, items: items.length });
+      await logAudit(session?.userId ?? null, "create", "sell", sellId, {
+        total,
+        items: items.length,
+        ...(fefo_confirmed ? { fefo_override: true } : {}),
+      });
 
       return NextResponse.json({ id: sellId }, { status: 201 });
     } catch (error) {
@@ -163,9 +202,15 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Error creating sell:", error);
-    const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+    const { statusCode = 500, fefoConflict } = error as {
+      statusCode?: number;
+      fefoConflict?: boolean;
+    };
     return NextResponse.json(
-      { error: statusCode === 500 ? "Error al crear la venta" : (error as Error).message },
+      {
+        error: statusCode === 500 ? "Error al crear la venta" : (error as Error).message,
+        ...(fefoConflict ? { fefo_conflict: true } : {}),
+      },
       { status: statusCode }
     );
   }

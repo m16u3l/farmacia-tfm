@@ -9,8 +9,10 @@ import {
   MenuItem,
   Grid,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
-import { Inventory, InventoryArea } from "@/types";
+import type { Theme } from "@mui/material/styles";
+import { Inventory, InventoryArea, TransferReason, TRANSFER_REASONS, TRANSFER_REASON_LABELS } from "@/types";
 import { buildAreaOptions } from "@/utils/areaTree";
 
 interface TransferDialogProps {
@@ -18,18 +20,21 @@ interface TransferDialogProps {
   item: Inventory | null;
   areas: InventoryArea[];
   onClose: () => void;
-  onSubmit: (data: { destination_area_id: number; quantity: number; notes?: string }) => void;
+  onSubmit: (data: { destination_area_id: number; quantity: number; reason: TransferReason; notes?: string }) => void;
 }
 
 export function TransferDialog({ open, item, areas, onClose, onSubmit }: TransferDialogProps) {
+  const fullScreen = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
   const [destinationAreaId, setDestinationAreaId] = useState<number | "">("");
   const [quantity, setQuantity] = useState<number>(0);
+  const [reason, setReason] = useState<TransferReason | "">("");
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (open) {
       setDestinationAreaId("");
       setQuantity(0);
+      setReason("");
       setNotes("");
     }
   }, [open, item]);
@@ -40,12 +45,12 @@ export function TransferDialog({ open, item, areas, onClose, onSubmit }: Transfe
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!destinationAreaId || quantity <= 0 || quantity > item.quantity_available) return;
-    onSubmit({ destination_area_id: Number(destinationAreaId), quantity, notes: notes || undefined });
+    if (!destinationAreaId || quantity <= 0 || quantity > item.quantity_available || !reason) return;
+    onSubmit({ destination_area_id: Number(destinationAreaId), quantity, reason, notes: notes || undefined });
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog fullScreen={fullScreen} open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
         <DialogTitle>Transferir Inventario</DialogTitle>
         <DialogContent>
@@ -85,6 +90,22 @@ export function TransferDialog({ open, item, areas, onClose, onSubmit }: Transfe
             </Grid>
             <Grid item xs={12}>
               <TextField
+                select
+                label="Motivo"
+                fullWidth
+                value={reason}
+                onChange={(e) => setReason(e.target.value as TransferReason)}
+                required
+              >
+                {TRANSFER_REASONS.map((r) => (
+                  <MenuItem key={r} value={r}>
+                    {TRANSFER_REASON_LABELS[r]}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
                 label="Notas"
                 fullWidth
                 multiline
@@ -97,7 +118,7 @@ export function TransferDialog({ open, item, areas, onClose, onSubmit }: Transfe
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button type="submit" variant="contained" disabled={!destinationAreaId || quantity <= 0 || quantity > item.quantity_available}>
+          <Button type="submit" variant="contained" disabled={!destinationAreaId || quantity <= 0 || quantity > item.quantity_available || !reason}>
             Transferir
           </Button>
         </DialogActions>

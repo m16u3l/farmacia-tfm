@@ -15,6 +15,8 @@ export interface Product {
   dosage_instructions?: string | null;
   barcode?: string | null;
   sale_control: SaleControl;
+  // Umbral de bajo stock propio del producto; null = usar el global de configuración
+  low_stock_threshold?: number | null;
   status: boolean;
   created_by?: number | null;
   created_at?: string;
