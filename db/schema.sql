@@ -390,8 +390,11 @@ CREATE TABLE IF NOT EXISTS inventory_validation_items (
   -- físicamente que no estaba en el snapshot). Nace con expected_quantity = 0 y
   -- actual_quantity = lo contado; el lote de inventario ya se crea con la
   -- cantidad real, así que no requiere ajuste posterior.
+  -- 'moved': el producto ya no está en el área validada porque se movió a otra;
+  -- el lote se reubica de inmediato (con rastro en inventory_movements), así
+  -- que tampoco requiere ajuste posterior.
   status               VARCHAR(20) NOT NULL DEFAULT 'pending'
-                       CHECK (status IN ('pending', 'confirmed', 'inconsistent', 'not_found', 'added')),
+                       CHECK (status IN ('pending', 'confirmed', 'inconsistent', 'not_found', 'added', 'moved')),
   -- Motivo estructurado de la discrepancia (cuando status es inconsistent/not_found).
   -- "notes" queda para detalle adicional en texto libre.
   discrepancy_reason   VARCHAR(20)

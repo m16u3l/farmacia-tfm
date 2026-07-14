@@ -3,7 +3,9 @@ export type ValidationStatus = 'in_progress' | 'completed' | 'cancelled';
 // 'added': lote registrado durante la propia validación (producto encontrado
 // físicamente que no estaba en el snapshot); nace verificado y no requiere
 // ajuste posterior.
-export type ValidationItemStatus = 'pending' | 'confirmed' | 'inconsistent' | 'not_found' | 'added';
+// 'moved': el producto ya no está en el área validada porque se movió a otra;
+// el lote se reubica de inmediato y el ítem no requiere ajuste posterior.
+export type ValidationItemStatus = 'pending' | 'confirmed' | 'inconsistent' | 'not_found' | 'added' | 'moved';
 
 export const DISCREPANCY_REASONS = ['vencido', 'dañado', 'merma', 'error_conteo', 'otro'] as const;
 export type DiscrepancyReason = typeof DISCREPANCY_REASONS[number];
@@ -70,6 +72,15 @@ export type AddValidationItemInput =
       sale_price?: number;
       notes?: string;
     };
+
+// Entrada de POST /api/inventory-validations/[id]/items/[itemId]/remove —
+// el producto ya no está en el área/ubicación que se está validando.
+// 'moved': se movió a otra área — el lote se reubica de inmediato.
+// 'gone':  ya no existe en el inventario — el ítem queda 'not_found' y el
+//          lote se lleva a 0 en el paso de ajustes.
+export type RemoveValidationItemInput =
+  | { outcome: 'moved'; destination_area_id: number; notes?: string }
+  | { outcome: 'gone'; discrepancy_reason?: DiscrepancyReason | null; notes?: string };
 
 export interface ValidationAdjustmentApplied {
   inventory_id: number;

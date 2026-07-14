@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { AddValidationItemInput, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
+import { AddValidationItemInput, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, RemoveValidationItemInput, ValidationAdjustmentResult, ValidationCoverage, ValidationType, DiscrepancyReason } from '@/types';
 
 export const validationService = {
   async createSession(data: { type: ValidationType; area_id?: number; notes?: string }): Promise<InventoryValidationWithItems> {
@@ -27,6 +27,13 @@ export const validationService = {
   async verifyItem(validationId: number, itemId: number, data: { actual_quantity: number; actual_expiry_date?: string | null; notes?: string; discrepancy_reason?: DiscrepancyReason | null }): Promise<InventoryValidationItem> {
     return apiRequest<InventoryValidationItem>(`/api/inventory-validations/${validationId}/items/${itemId}`, {
       method: 'PUT',
+      body: data
+    });
+  },
+
+  async removeItem(validationId: number, itemId: number, data: RemoveValidationItemInput): Promise<InventoryValidationItem> {
+    return apiRequest<InventoryValidationItem>(`/api/inventory-validations/${validationId}/items/${itemId}/remove`, {
+      method: 'POST',
       body: data
     });
   },

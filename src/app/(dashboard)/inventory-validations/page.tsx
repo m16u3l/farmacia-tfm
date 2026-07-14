@@ -23,6 +23,8 @@ import {
   MenuItem,
   Snackbar,
   ChipProps,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import VerifiedIcon from "@mui/icons-material/Verified";
@@ -30,13 +32,15 @@ import EditIcon from "@mui/icons-material/Edit";
 import BuildIcon from "@mui/icons-material/Build";
 import AddIcon from "@mui/icons-material/Add";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
-import { AddValidationItemInput, Inventory, InventoryArea, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, Product, ValidationType, DiscrepancyReason } from "@/types";
+import LocationOffIcon from "@mui/icons-material/LocationOff";
+import { AddValidationItemInput, Inventory, InventoryArea, InventoryValidation, InventoryValidationItem, InventoryValidationWithItems, Product, RemoveValidationItemInput, ValidationType, DiscrepancyReason } from "@/types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useValidations } from "@/hooks/useValidations";
 import { buildAreaOptions } from "@/utils/areaTree";
 import { VALIDATION_ITEM_STATUS_LABELS, VALIDATION_TYPE_LABELS } from "@/utils/validationLabels";
 import { VerifyItemDialog } from "./_components/VerifyItemDialog";
+import { RemoveItemDialog } from "./_components/RemoveItemDialog";
 import { AddItemDialog } from "./_components/AddItemDialog";
 import { HistoryTab } from "./_components/HistoryTab";
 import { CoverageTab } from "./_components/CoverageTab";
@@ -66,6 +70,7 @@ export default function InventoryValidationsPage() {
   const [reviewValidation, setReviewValidation] = useState<InventoryValidationWithItems | null>(null);
   const [resumeCandidates, setResumeCandidates] = useState<InventoryValidation[]>([]);
   const [openVerifyDialog, setOpenVerifyDialog] = useState(false);
+  const [openRemoveDialog, setOpenRemoveDialog] = useState(false);
   const [openAddItemDialog, setOpenAddItemDialog] = useState(false);
   const [currentValidationItem, setCurrentValidationItem] = useState<InventoryValidationItem | null>(null);
   const [applyingAdjustments, setApplyingAdjustments] = useState(false);
@@ -75,7 +80,7 @@ export default function InventoryValidationsPage() {
     severity: "success" as "success" | "error" | "info",
   });
 
-  const { error, createSession, addItem, verifyItem, completeSession, cancelSession, getAll, getSession, applyAdjustments } = useValidations();
+  const { error, createSession, addItem, verifyItem, removeItem, completeSession, cancelSession, getAll, getSession, applyAdjustments } = useValidations();
   const { confirm, confirmDialog } = useConfirmDialog();
   const verificationMode = activeValidation !== null;
 
@@ -308,6 +313,47 @@ export default function InventoryValidationsPage() {
 
     setOpenVerifyDialog(false);
     setCurrentValidationItem(null);
+  };
+
+  const handleOpenRemoveDialog = (item: InventoryValidationItem) => {
+    setCurrentValidationItem(item);
+    setOpenRemoveDialog(true);
+  };
+
+  const handleRemoveItem = async (data: RemoveValidationItemInput) => {
+    if (!currentValidationItem || !activeValidation) return;
+
+    const updatedItem = await removeItem(
+      activeValidation.validation_id,
+      currentValidationItem.validation_item_id,
+      data
+    );
+
+    if (!updatedItem) {
+      notify(error || "Error al registrar el resultado", "error");
+      return;
+    }
+
+    setActiveValidation({
+      ...activeValidation,
+      items: activeValidation.items.map((i) =>
+        i.validation_item_id === updatedItem.validation_item_id ? { ...i, ...updatedItem } : i
+      ),
+    });
+
+    notify(
+      data.outcome === "moved"
+        ? `${currentValidationItem.product_name || "Ítem"} reubicado a otra área`
+        : `${currentValidationItem.product_name || "Ítem"} marcado como no encontrado`,
+      "success"
+    );
+
+    setOpenRemoveDialog(false);
+    setCurrentValidationItem(null);
+    if (data.outcome === "moved") {
+      // El lote cambió de área — refrescar el listado de inventario.
+      fetchInventory();
+    }
   };
 
   const handleFinishVerification = async () => {
@@ -933,15 +979,26 @@ export default function InventoryValidationsPage() {
                           {item.status === "added" ? (
                             "—"
                           ) : (
-                            <Button
-                              variant={item.status !== "pending" ? "outlined" : "contained"}
-                              size="small"
-                              color={item.status !== "pending" ? "success" : "primary"}
-                              onClick={() => handleOpenVerifyDialog(item)}
-                              startIcon={item.status !== "pending" ? <EditIcon /> : <VerifiedIcon />}
-                            >
-                              {item.status !== "pending" ? "Editar" : "Verificar"}
-                            </Button>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                              <Button
+                                variant={item.status !== "pending" ? "outlined" : "contained"}
+                                size="small"
+                                color={item.status !== "pending" ? "success" : "primary"}
+                                onClick={() => handleOpenVerifyDialog(item)}
+                                startIcon={item.status !== "pending" ? <EditIcon /> : <VerifiedIcon />}
+                              >
+                                {item.status !== "pending" ? "Editar" : "Verificar"}
+                              </Button>
+                              <Tooltip title="El producto ya no está en esta área">
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => handleOpenRemoveDialog(item)}
+                                >
+                                  <LocationOffIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
                           )}
                         </TableCell>
                       </TableRow>
@@ -970,6 +1027,15 @@ export default function InventoryValidationsPage() {
         item={currentValidationItem}
         onClose={() => setOpenVerifyDialog(false)}
         onSubmit={handleVerifyItem}
+      />
+
+      <RemoveItemDialog
+        open={openRemoveDialog}
+        item={currentValidationItem}
+        areas={areas}
+        currentAreaId={activeValidation?.area_id}
+        onClose={() => setOpenRemoveDialog(false)}
+        onSubmit={handleRemoveItem}
       />
 
       {activeValidation?.type === "area" && (

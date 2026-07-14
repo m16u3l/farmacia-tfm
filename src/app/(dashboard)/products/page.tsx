@@ -14,6 +14,8 @@ import {
   DialogContent,
   DialogActions,
   Stack,
+  TextField,
+  InputAdornment,
   useMediaQuery,
 } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
@@ -23,6 +25,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import StorefrontIcon from "@mui/icons-material/StorefrontOutlined";
+import SearchIcon from "@mui/icons-material/Search";
 import { Product, ProductFormData, SaleControl, SALE_CONTROL_LABELS } from "@/types/products";
 // Date utilities removed as they're not used
 import { ProductForm } from "@/components/products/ProductForm";
@@ -31,9 +34,11 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { fluidFontSize } from "@/utils/fluidType";
+import { smartSearch } from "@/utils/smartSearch";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -197,6 +202,16 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
 
+  const visibleProducts = smartSearch(products, searchText, (product) => [
+    product.name,
+    product.active_ingredient,
+    product.laboratory,
+    product.barcode,
+    product.concentration,
+    product.category,
+    product.description,
+  ]);
+
   const columns: GridColDef[] = [
     { field: "product_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
     { field: "name", headerName: "Nombre", flex: 2, minWidth: 150 },
@@ -306,6 +321,22 @@ export default function ProductsPage() {
             </Button>
           }
         />
+        <Box sx={{ display: "flex", gap: 1.5, mb: 1, flexWrap: "wrap", alignItems: "center" }}>
+          <TextField
+            size="small"
+            placeholder="Buscar por nombre, principio activo, laboratorio, código…"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: "1 1 220px" }}
+          />
+        </Box>
         <Box sx={{ width: "100%", overflowX: "auto" }}>
           <DataGrid
             slots={{
@@ -317,7 +348,7 @@ export default function ProductsPage() {
                 />
               ),
             }}
-            rows={products}
+            rows={visibleProducts}
             columns={columns}
             getRowId={(row) => row.product_id}
             loading={loading}

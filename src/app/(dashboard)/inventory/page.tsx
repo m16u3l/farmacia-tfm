@@ -35,6 +35,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { buildAreaOptions } from "@/utils/areaTree";
+import { smartSearch } from "@/utils/smartSearch";
 import { fluidFontSize } from "@/utils/fluidType";
 
 const EMPTY_FORM: InventoryFormData = {
@@ -283,17 +284,20 @@ export default function InventoryPage() {
   };
 
   const outOfStockCount = inventory.filter(item => item.quantity_available === 0).length;
-  const normalizedSearch = searchText.trim().toLowerCase();
-  const visibleInventory = inventory.filter((item) => {
+  const filteredInventory = inventory.filter((item) => {
     if (!showOutOfStock && item.quantity_available <= 0) return false;
     if (areaFilter !== "all" && String(item.area_id ?? "") !== areaFilter) return false;
-    if (normalizedSearch) {
-      const name = (item.product_name || getProductName(item.product_id)).toLowerCase();
-      const batch = (item.batch_number || "").toLowerCase();
-      if (!name.includes(normalizedSearch) && !batch.includes(normalizedSearch)) return false;
-    }
     return true;
   });
+  const visibleInventory = smartSearch(filteredInventory, searchText, (item) => [
+    item.product_name || getProductName(item.product_id),
+    item.product_active_ingredient,
+    item.batch_number,
+    item.product_barcode,
+    item.product_laboratory,
+    item.product_concentration,
+    item.product_category,
+  ]);
 
   const columns: GridColDef[] = [
     { field: "inventory_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
@@ -598,7 +602,7 @@ export default function InventoryPage() {
         >
           <TextField
             size="small"
-            placeholder="Buscar producto o lote…"
+            placeholder="Buscar por nombre, principio activo, lote, código…"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             InputProps={{

@@ -16,4 +16,5 @@ export const VALIDATION_ITEM_STATUS_LABELS: Record<
   inconsistent: { label: "INCONSISTENCIA", color: "warning" },
   not_found: { label: "NO ENCONTRADO", color: "error" },
   added: { label: "AGREGADO", color: "info" },
+  moved: { label: "REUBICADO", color: "info" },
 };
