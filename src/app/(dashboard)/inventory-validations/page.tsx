@@ -184,6 +184,19 @@ export default function InventoryValidationsPage() {
     return product ? product.name : `${productId}`;
   };
 
+  // Etiqueta breadcrumb del área ("Padre › Hija") — los nombres de área solos
+  // suelen ser números de estante ("1", "6") y no identifican nada sin su padre.
+  const getAreaLabel = (areaId: number | null | undefined, fallback?: string | null) => {
+    const parts: string[] = [];
+    let current = areas.find((a) => a.area_id === areaId);
+    while (current) {
+      parts.unshift(current.name);
+      const parentId = current.parent_area_id;
+      current = parentId ? areas.find((a) => a.area_id === parentId) : undefined;
+    }
+    return parts.length > 0 ? parts.join(" › ") : fallback || "";
+  };
+
   // Estado combinado (vencimiento + stock) a partir de los valores crudos —
   // reutilizado tanto por `inventory` (dashboard) como por los ítems de una
   // sesión de validación (que snapshotean expiry_date/expected_quantity).
@@ -560,7 +573,7 @@ export default function InventoryValidationsPage() {
                     disabled={verificationMode}
                   >
                     Reanudar {VALIDATION_TYPE_LABELS[s.type]}
-                    {s.area_name ? ` — ${s.area_name}` : ""} ({formatDate(s.started_at)})
+                    {s.area_id ? ` — ${getAreaLabel(s.area_id, s.area_name)}` : ""} ({formatDate(s.started_at)})
                   </Button>
                 ))}
               </Box>
@@ -731,7 +744,10 @@ export default function InventoryValidationsPage() {
                 <Typography>
                   <strong>Validación activa: </strong>{" "}
                   {VALIDATION_TYPE_LABELS[activeValidation.type]}
-                  {activeValidation.area_name ? ` — ${activeValidation.area_name}` : ""} -{" "}
+                  {activeValidation.area_id
+                    ? ` — ${getAreaLabel(activeValidation.area_id, activeValidation.area_name)}`
+                    : ""}{" "}
+                  -{" "}
                   {activeValidation.items.filter((i) => i.status !== "pending").length} de{" "}
                   {activeValidation.items.length} items verificados
                 </Typography>
