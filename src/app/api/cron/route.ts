@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
       `SELECT COUNT(*)::int AS count
        FROM inventory i
        JOIN products p ON p.product_id = i.product_id
-       WHERE i.quantity_available <= COALESCE(p.low_stock_threshold, $1)`,
+       WHERE i.quantity_available > 0
+         AND i.quantity_available <= COALESCE(p.low_stock_threshold, $1)`,
       [low_stock_threshold]
     ),
   ]);

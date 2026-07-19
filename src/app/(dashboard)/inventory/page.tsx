@@ -253,7 +253,7 @@ export default function InventoryPage() {
   };
 
   const isLowStock = (quantity: number) => {
-    return quantity <= 10; // Consider low stock if 10 or fewer items
+    return quantity > 0 && quantity <= 10; // Bajo stock: 10 o menos, sin contar agotados
   };
 
   const isExpired = (expiryDate: string | null) => {
@@ -276,11 +276,11 @@ export default function InventoryPage() {
   };
 
   const getExpiringItems = () => {
-    return inventory.filter(item => item.expiry_date && isAboutToExpire(item.expiry_date));
+    return inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isAboutToExpire(item.expiry_date));
   };
 
   const getExpiredItems = () => {
-    return inventory.filter(item => item.expiry_date && isExpired(item.expiry_date));
+    return inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isExpired(item.expiry_date));
   };
 
   const outOfStockCount = inventory.filter(item => item.quantity_available === 0).length;

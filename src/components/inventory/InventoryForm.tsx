@@ -1,4 +1,6 @@
 import {
+  Autocomplete,
+  Box,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -7,11 +9,24 @@ import {
   Button,
   MenuItem,
   Grid,
+  Typography,
   useMediaQuery,
 } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import { InventoryArea, InventoryFormData, Product } from "@/types";
 import { buildAreaOptions } from "@/utils/areaTree";
+import { smartSearch } from "@/utils/smartSearch";
+
+// Mismo buscador inteligente que usa la tabla de inventario (acentos, typos, orden libre)
+const filterProductOptions = (options: Product[], state: { inputValue: string }) =>
+  smartSearch(options, state.inputValue, (product) => [
+    product.name,
+    product.active_ingredient,
+    product.barcode,
+    product.laboratory,
+    product.concentration,
+    product.category,
+  ]);
 
 interface InventoryFormProps {
   open: boolean;
@@ -50,21 +65,37 @@ export function InventoryForm({
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
             <Grid item xs={12}>
-              <TextField
-                select
-                autoFocus
-                label="Producto"
-                fullWidth
-                value={formData.product_id || ""}
-                onChange={(e) => onChange("product_id", e.target.value ? parseInt(e.target.value) : null)}
-                required
-              >
-                {products.map((product) => (
-                  <MenuItem key={product.product_id} value={product.product_id}>
-                    {product.name} - {product.category}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Autocomplete
+                options={products}
+                filterOptions={filterProductOptions}
+                value={products.find((p) => p.product_id === formData.product_id) ?? null}
+                onChange={(_, newValue) => onChange("product_id", newValue?.product_id ?? null)}
+                getOptionLabel={(option) =>
+                  [option.name, option.concentration].filter(Boolean).join(" ")
+                }
+                isOptionEqualToValue={(option, value) => option.product_id === value.product_id}
+                noOptionsText="Sin resultados"
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} key={option.product_id}>
+                    <Box>
+                      <Typography variant="body2">{option.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {[option.laboratory, option.active_ingredient, option.concentration, option.category]
+                          .filter(Boolean)
+                          .join(" · ") || "Sin datos adicionales"}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    autoFocus
+                    label="Producto (nombre, principio activo, código…)"
+                    required
+                  />
+                )}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
