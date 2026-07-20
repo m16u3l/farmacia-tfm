@@ -16,6 +16,13 @@ import {
   MenuItem,
   InputAdornment,
   useMediaQuery,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Link,
 } from "@mui/material";
 import type { Theme } from "@mui/material/styles";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
@@ -253,6 +260,8 @@ export default function InventoryPage() {
     return product ? product.name : `${productId}`;
   };
 
+  const getItemLocation = (item: Inventory) => item.area_full_path || item.area_name || "Sin asignar";
+
   const isLowStock = (quantity: number) => {
     return quantity > 0 && quantity <= 10; // Bajo stock: 10 o menos, sin contar agotados
   };
@@ -272,16 +281,100 @@ export default function InventoryPage() {
     return daysUntilExpiry <= 40 && daysUntilExpiry >= 0; // About to expire within 40 days
   };
 
-  const getLowStockItems = () => {
-    return inventory.filter(item => isLowStock(item.quantity_available));
-  };
+  const lowStockItems = inventory.filter(item => isLowStock(item.quantity_available));
+  const expiringItems = inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isAboutToExpire(item.expiry_date));
+  const expiredItems = inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isExpired(item.expiry_date));
 
-  const getExpiringItems = () => {
-    return inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isAboutToExpire(item.expiry_date));
-  };
+  const ALERT_ROW_LIMIT = 5;
 
-  const getExpiredItems = () => {
-    return inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isExpired(item.expiry_date));
+  const renderAlertTable = (items: Inventory[], alertKey: keyof typeof expandedAlert) => {
+    const visible = expandedAlert[alertKey] ? items : items.slice(0, ALERT_ROW_LIMIT);
+    const moreLink = items.length > ALERT_ROW_LIMIT && (
+      <Link
+        component="button"
+        type="button"
+        underline="hover"
+        onClick={() => setExpandedAlert((prev) => ({ ...prev, [alertKey]: !prev[alertKey] }))}
+        sx={{ fontSize: fluidFontSize(0.7, 0.8), mt: 0.5, display: "inline-block" }}
+      >
+        {expandedAlert[alertKey] ? "Ver menos" : `Ver los ${items.length - ALERT_ROW_LIMIT} restantes`}
+      </Link>
+    );
+
+    // En móvil, una tabla de 5 columnas obliga a hacer scroll horizontal dentro
+    // de la alerta; en su lugar se muestra cada lote como una tarjeta apilada.
+    if (isMobile) {
+      return (
+        <>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1, maxHeight: 320, overflowY: "auto" }}>
+            {visible.map((item) => (
+              <Box
+                key={item.inventory_id}
+                sx={{
+                  p: 1,
+                  borderRadius: 1,
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography sx={{ fontWeight: 600, fontSize: fluidFontSize(0.75, 0.85) }}>
+                  {item.product_name || getProductName(item.product_id)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  Lote: {item.batch_number || "N/A"} · {getItemLocation(item)}
+                </Typography>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}>
+                  <Typography variant="caption">
+                    {item.expiry_date ? formatDate(item.expiry_date) : "-"}
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                    Cant: {item.quantity_available}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+          {moreLink}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <TableContainer sx={{ maxHeight: 320 }}>
+          <Table size="small" stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: "bold", fontSize: fluidFontSize(0.7, 0.8) }}>Producto</TableCell>
+                <TableCell sx={{ fontWeight: "bold", fontSize: fluidFontSize(0.7, 0.8) }}>Lote</TableCell>
+                <TableCell sx={{ fontWeight: "bold", fontSize: fluidFontSize(0.7, 0.8) }}>Ubicación</TableCell>
+                <TableCell sx={{ fontWeight: "bold", fontSize: fluidFontSize(0.7, 0.8) }}>Vencimiento</TableCell>
+                <TableCell sx={{ fontWeight: "bold", fontSize: fluidFontSize(0.7, 0.8) }} align="right">Cantidad</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {visible.map((item) => (
+                <TableRow key={item.inventory_id}>
+                  <TableCell sx={{ fontSize: fluidFontSize(0.7, 0.85) }}>
+                    {item.product_name || getProductName(item.product_id)}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: fluidFontSize(0.7, 0.85) }}>{item.batch_number || "N/A"}</TableCell>
+                  <TableCell sx={{ fontSize: fluidFontSize(0.7, 0.85) }}>{getItemLocation(item)}</TableCell>
+                  <TableCell sx={{ fontSize: fluidFontSize(0.7, 0.85) }}>
+                    {item.expiry_date ? formatDate(item.expiry_date) : "-"}
+                  </TableCell>
+                  <TableCell sx={{ fontSize: fluidFontSize(0.7, 0.85) }} align="right">
+                    {item.quantity_available}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {moreLink}
+      </>
+    );
   };
 
   const outOfStockCount = inventory.filter(item => item.quantity_available === 0).length;
@@ -470,129 +563,53 @@ export default function InventoryPage() {
         />
 
         {/* Alertas de bajo stock y vencimiento */}
-        {(getExpiredItems().length > 0 || getLowStockItems().length > 0 || getExpiringItems().length > 0) && (
+        {(expiredItems.length > 0 || lowStockItems.length > 0 || expiringItems.length > 0) && (
           <Box sx={{ mb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
-            {getExpiredItems().length > 0 && (
-              <Alert 
-                severity="error" 
+            {expiredItems.length > 0 && (
+              <Alert
+                severity="error"
                 icon={<WarningIcon />}
-                sx={{ 
+                sx={{
                   fontSize: fluidFontSize(0.75, 0.875),
                   "& .MuiAlert-message": { width: "100%" },
-                  bgcolor: 'error.light',
-                  color: 'error.contrastText'
                 }}
               >
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-                    🚨 Productos VENCIDOS ({getExpiredItems().length})
-                  </Typography>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {(expandedAlert.expired ? getExpiredItems() : getExpiredItems().slice(0, 5)).map(item => (
-                      <Chip
-                        key={item.inventory_id}
-                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? formatDate(item.expiry_date) : 'N/A'})`}
-                        size="small"
-                        sx={{
-                          bgcolor: 'error.dark',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          '& .MuiChip-label': { fontSize: fluidFontSize(0.6, 0.75) }
-                        }}
-                      />
-                    ))}
-                    {getExpiredItems().length > 5 && (
-                      <Chip
-                        label={expandedAlert.expired ? "Ver menos" : `+${getExpiredItems().length - 5} más`}
-                        size="small"
-                        onClick={() => setExpandedAlert((prev) => ({ ...prev, expired: !prev.expired }))}
-                        sx={{
-                          bgcolor: 'error.dark',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          '& .MuiChip-label': { fontSize: fluidFontSize(0.6, 0.75) }
-                        }}
-                      />
-                    )}
-                  </Box>
-                </Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                  🚨 Productos VENCIDOS ({expiredItems.length})
+                </Typography>
+                {renderAlertTable(expiredItems, "expired")}
               </Alert>
             )}
 
-            {getLowStockItems().length > 0 && (
-              <Alert 
-                severity="warning" 
+            {lowStockItems.length > 0 && (
+              <Alert
+                severity="warning"
                 icon={<WarningIcon />}
-                sx={{ 
+                sx={{
                   fontSize: fluidFontSize(0.75, 0.875),
                   "& .MuiAlert-message": { width: "100%" }
                 }}
               >
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-                    ⚠️ Productos con bajo stock ({getLowStockItems().length})
-                  </Typography>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {(expandedAlert.lowStock ? getLowStockItems() : getLowStockItems().slice(0, 5)).map(item => (
-                      <Chip
-                        key={item.inventory_id}
-                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.quantity_available})`}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                      />
-                    ))}
-                    {getLowStockItems().length > 5 && (
-                      <Chip
-                        label={expandedAlert.lowStock ? "Ver menos" : `+${getLowStockItems().length - 5} más`}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        onClick={() => setExpandedAlert((prev) => ({ ...prev, lowStock: !prev.lowStock }))}
-                        sx={{ cursor: 'pointer' }}
-                      />
-                    )}
-                  </Box>
-                </Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                  ⚠️ Productos con bajo stock ({lowStockItems.length})
+                </Typography>
+                {renderAlertTable(lowStockItems, "lowStock")}
               </Alert>
             )}
 
-            {getExpiringItems().length > 0 && (
-              <Alert 
-                severity="warning" 
+            {expiringItems.length > 0 && (
+              <Alert
+                severity="warning"
                 icon={<EventBusyIcon />}
-                sx={{ 
+                sx={{
                   fontSize: fluidFontSize(0.75, 0.875),
                   "& .MuiAlert-message": { width: "100%" }
                 }}
               >
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
-                    📅 Productos próximos a vencer ({getExpiringItems().length})
-                  </Typography>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {(expandedAlert.expiring ? getExpiringItems() : getExpiringItems().slice(0, 5)).map(item => (
-                      <Chip
-                        key={item.inventory_id}
-                        label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? formatDate(item.expiry_date) : 'N/A'})`}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                      />
-                    ))}
-                    {getExpiringItems().length > 5 && (
-                      <Chip
-                        label={expandedAlert.expiring ? "Ver menos" : `+${getExpiringItems().length - 5} más`}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        onClick={() => setExpandedAlert((prev) => ({ ...prev, expiring: !prev.expiring }))}
-                        sx={{ cursor: 'pointer' }}
-                      />
-                    )}
-                  </Box>
-                </Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                  📅 Productos próximos a vencer ({expiringItems.length})
+                </Typography>
+                {renderAlertTable(expiringItems, "expiring")}
               </Alert>
             )}
           </Box>
@@ -601,10 +618,11 @@ export default function InventoryPage() {
         <Box
           sx={{
             display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
             gap: 1.5,
             mb: 1,
             flexWrap: "wrap",
-            alignItems: "center",
+            alignItems: { xs: "stretch", sm: "center" },
           }}
         >
           <TextField
@@ -619,7 +637,7 @@ export default function InventoryPage() {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: "1 1 220px" }}
+            sx={{ flex: { xs: "1 1 auto", sm: "1 1 220px" }, width: { xs: "100%", sm: "auto" } }}
           />
           <TextField
             select
@@ -627,7 +645,7 @@ export default function InventoryPage() {
             label="Área"
             value={areaFilter}
             onChange={(e) => setAreaFilter(e.target.value)}
-            sx={{ flex: "0 1 200px", minWidth: 150 }}
+            sx={{ flex: { xs: "1 1 auto", sm: "0 1 200px" }, width: { xs: "100%", sm: "auto" }, minWidth: { sm: 150 } }}
           >
             <MenuItem value="all">Todas las áreas</MenuItem>
             {buildAreaOptions(areas).map(({ area, depth }) => (
@@ -645,7 +663,10 @@ export default function InventoryPage() {
               />
             }
             label={`Mostrar agotados${outOfStockCount > 0 ? ` (${outOfStockCount})` : ""}`}
-            sx={{ ml: "auto", "& .MuiFormControlLabel-label": { fontSize: fluidFontSize(0.75, 0.875) } }}
+            sx={{
+              ml: { xs: 0, sm: "auto" },
+              "& .MuiFormControlLabel-label": { fontSize: fluidFontSize(0.75, 0.875) },
+            }}
           />
         </Box>
 
