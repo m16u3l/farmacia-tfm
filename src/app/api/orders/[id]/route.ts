@@ -95,7 +95,8 @@ export async function PUT(
 
       if (product_ids) {
         await client.query("DELETE FROM order_items WHERE order_id = $1", [id]);
-        for (const productId of product_ids) {
+        const uniqueProductIds = [...new Set(product_ids)];
+        for (const productId of uniqueProductIds) {
           await client.query(
             `INSERT INTO order_items (order_id, product_id) VALUES ($1, $2)`,
             [id, productId]

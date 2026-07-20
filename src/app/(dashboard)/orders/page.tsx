@@ -250,18 +250,24 @@ export default function OrdersPage() {
       flex: 2.5,
       minWidth: 200,
       sortable: false,
-      renderCell: (params: GridRenderCellParams) => (
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, py: 0.5 }}>
-          {(params.row.products as Order["products"]).map((p) => (
-            <Chip
-              key={p.product_id}
-              label={p.name}
-              size="small"
-              sx={{ fontSize: fluidFontSize(0.65, 0.75) }}
-            />
-          ))}
-        </Box>
-      ),
+      renderCell: (params: GridRenderCellParams) => {
+        const products = params.row.products as Order["products"];
+        const uniqueProducts = Array.from(
+          new Map(products.map((p) => [p.product_id, p])).values()
+        );
+        return (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, py: 0.5 }}>
+            {uniqueProducts.map((p) => (
+              <Chip
+                key={p.product_id}
+                label={p.name}
+                size="small"
+                sx={{ fontSize: fluidFontSize(0.65, 0.75) }}
+              />
+            ))}
+          </Box>
+        );
+      },
     },
     {
       field: "note",

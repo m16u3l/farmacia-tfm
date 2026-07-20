@@ -15,7 +15,9 @@ import {
   TableHead,
   TableRow,
   Chip,
+  useMediaQuery,
 } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -50,6 +52,7 @@ export default function AreasPage() {
 
   const { createArea, updateArea, deleteArea } = useAreas();
   const { confirm, confirmDialog } = useConfirmDialog();
+  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
 
   const fetchAreas = async () => {
     try {
@@ -148,56 +151,95 @@ export default function AreasPage() {
           subtitle="Sucursales, almacenes y estantes donde se ubica el inventario"
           icon={<AccountTreeOutlinedIcon />}
           action={
-            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAdd}
+              sx={{ width: { xs: "100%", sm: "auto" } }}
+            >
               Agregar Área
             </Button>
           }
         />
 
-        <TableContainer sx={{ mt: 2 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Nombre</TableCell>
-                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Tipo</TableCell>
-                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Estado</TableCell>
-                <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {treeOptions.map(({ area, depth }) => (
-                <TableRow key={area.area_id} sx={{ "&:nth-of-type(even)": { bgcolor: "action.hover" } }}>
-                  <TableCell sx={{ pl: 2 + depth * 3 }}>{area.name}</TableCell>
-                  <TableCell>{area.type}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={area.is_active ? "Activa" : "Inactiva"}
-                      color={area.is_active ? "success" : "default"}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton aria-label="Editar área" size="small" onClick={() => handleEdit(area)} color="primary">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton aria-label="Eliminar área" size="small" onClick={() => handleDelete(area.area_id)} color="error">
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!loading && treeOptions.length === 0 && (
+        {!loading && treeOptions.length === 0 && (
+          <Typography color="text.secondary" align="center" sx={{ mt: 2 }}>
+            No hay áreas creadas todavía.
+          </Typography>
+        )}
+
+        {treeOptions.length > 0 && isMobile && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
+            {treeOptions.map(({ area, label }) => (
+              <Box
+                key={area.area_id}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 1,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Typography sx={{ fontWeight: 600 }}>{label}</Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5, flexWrap: "wrap" }}>
+                  <Chip label={area.type} size="small" variant="outlined" />
+                  <Chip
+                    label={area.is_active ? "Activa" : "Inactiva"}
+                    color={area.is_active ? "success" : "default"}
+                    size="small"
+                  />
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
+                  <IconButton aria-label="Editar área" size="small" onClick={() => handleEdit(area)} color="primary">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton aria-label="Eliminar área" size="small" onClick={() => handleDelete(area.area_id)} color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {treeOptions.length > 0 && !isMobile && (
+          <TableContainer sx={{ mt: 2 }}>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={4}>
-                    <Typography color="text.secondary" align="center">
-                      No hay áreas creadas todavía.
-                    </Typography>
-                  </TableCell>
+                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Nombre</TableCell>
+                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Tipo</TableCell>
+                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Estado</TableCell>
+                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Acciones</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {treeOptions.map(({ area, label }) => (
+                  <TableRow key={area.area_id} sx={{ "&:nth-of-type(even)": { bgcolor: "action.hover" } }}>
+                    <TableCell>{label}</TableCell>
+                    <TableCell>{area.type}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={area.is_active ? "Activa" : "Inactiva"}
+                        color={area.is_active ? "success" : "default"}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <IconButton aria-label="Editar área" size="small" onClick={() => handleEdit(area)} color="primary">
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton aria-label="Eliminar área" size="small" onClick={() => handleDelete(area.area_id)} color="error">
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
         {error && (
           <Typography color="error" mt={2}>
             {error}

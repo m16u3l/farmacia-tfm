@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
 
       const order = orderResult.rows[0];
 
-      for (const productId of product_ids) {
+      const uniqueProductIds = [...new Set(product_ids)];
+      for (const productId of uniqueProductIds) {
         await client.query(
           `INSERT INTO order_items (order_id, product_id) VALUES ($1, $2)`,
           [order.order_id, productId]
