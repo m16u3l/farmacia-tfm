@@ -62,6 +62,7 @@ export default function InventoryPage() {
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [areaFilter, setAreaFilter] = useState<string>("all");
+  const [expandedAlert, setExpandedAlert] = useState({ expired: false, lowStock: false, expiring: false });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -487,12 +488,12 @@ export default function InventoryPage() {
                     🚨 Productos VENCIDOS ({getExpiredItems().length})
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {getExpiredItems().slice(0, 5).map(item => (
+                    {(expandedAlert.expired ? getExpiredItems() : getExpiredItems().slice(0, 5)).map(item => (
                       <Chip
                         key={item.inventory_id}
                         label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? formatDate(item.expiry_date) : 'N/A'})`}
                         size="small"
-                        sx={{ 
+                        sx={{
                           bgcolor: 'error.dark',
                           color: 'white',
                           fontWeight: 'bold',
@@ -502,12 +503,14 @@ export default function InventoryPage() {
                     ))}
                     {getExpiredItems().length > 5 && (
                       <Chip
-                        label={`+${getExpiredItems().length - 5} más`}
+                        label={expandedAlert.expired ? "Ver menos" : `+${getExpiredItems().length - 5} más`}
                         size="small"
-                        sx={{ 
+                        onClick={() => setExpandedAlert((prev) => ({ ...prev, expired: !prev.expired }))}
+                        sx={{
                           bgcolor: 'error.dark',
                           color: 'white',
                           fontWeight: 'bold',
+                          cursor: 'pointer',
                           '& .MuiChip-label': { fontSize: fluidFontSize(0.6, 0.75) }
                         }}
                       />
@@ -531,7 +534,7 @@ export default function InventoryPage() {
                     ⚠️ Productos con bajo stock ({getLowStockItems().length})
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {getLowStockItems().slice(0, 5).map(item => (
+                    {(expandedAlert.lowStock ? getLowStockItems() : getLowStockItems().slice(0, 5)).map(item => (
                       <Chip
                         key={item.inventory_id}
                         label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.quantity_available})`}
@@ -542,10 +545,12 @@ export default function InventoryPage() {
                     ))}
                     {getLowStockItems().length > 5 && (
                       <Chip
-                        label={`+${getLowStockItems().length - 5} más`}
+                        label={expandedAlert.lowStock ? "Ver menos" : `+${getLowStockItems().length - 5} más`}
                         size="small"
                         color="warning"
                         variant="outlined"
+                        onClick={() => setExpandedAlert((prev) => ({ ...prev, lowStock: !prev.lowStock }))}
+                        sx={{ cursor: 'pointer' }}
                       />
                     )}
                   </Box>
@@ -567,7 +572,7 @@ export default function InventoryPage() {
                     📅 Productos próximos a vencer ({getExpiringItems().length})
                   </Typography>
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {getExpiringItems().slice(0, 5).map(item => (
+                    {(expandedAlert.expiring ? getExpiringItems() : getExpiringItems().slice(0, 5)).map(item => (
                       <Chip
                         key={item.inventory_id}
                         label={`${getProductName(item.product_id)} - Lote: ${item.batch_number || 'N/A'} (${item.expiry_date ? formatDate(item.expiry_date) : 'N/A'})`}
@@ -578,10 +583,12 @@ export default function InventoryPage() {
                     ))}
                     {getExpiringItems().length > 5 && (
                       <Chip
-                        label={`+${getExpiringItems().length - 5} más`}
+                        label={expandedAlert.expiring ? "Ver menos" : `+${getExpiringItems().length - 5} más`}
                         size="small"
                         color="warning"
                         variant="outlined"
+                        onClick={() => setExpandedAlert((prev) => ({ ...prev, expiring: !prev.expiring }))}
+                        sx={{ cursor: 'pointer' }}
                       />
                     )}
                   </Box>
