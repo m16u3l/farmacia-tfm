@@ -13,8 +13,10 @@ export async function apiRequest<T>(endpoint: string, options?: RequestOptions):
   });
 
   if (!response.ok) {
+    // Las rutas de API de este repo responden { error: "..." }; se prioriza ese
+    // campo para que el mensaje del servidor llegue a la UI.
     const error = await response.json();
-    throw new Error(error.message || 'Error en la solicitud');
+    throw new Error(error.error || error.message || 'Error en la solicitud');
   }
 
   return response.json();

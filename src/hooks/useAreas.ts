@@ -1,10 +1,27 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { areaService } from '@/services/areaService';
-import { InventoryArea, InventoryAreaFormData } from '@/types';
+import { AreaLayoutItem, AreaLayoutSaveResult, InventoryArea, InventoryAreaFormData } from '@/types';
 
 export const useAreas = () => {
+  const [areas, setAreas] = useState<InventoryArea[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchAreas = useCallback(async (): Promise<InventoryArea[] | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await areaService.getAll();
+      setAreas(data);
+      return data;
+    } catch (err) {
+      setError((err as Error).message);
+      setAreas([]);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const createArea = async (data: InventoryAreaFormData): Promise<InventoryArea | null> => {
     setLoading(true);
@@ -48,11 +65,30 @@ export const useAreas = () => {
     }
   };
 
+  const saveLayout = async (items: AreaLayoutItem[]): Promise<AreaLayoutSaveResult | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await areaService.saveLayout(items);
+      setAreas(result.areas);
+      return result;
+    } catch (err) {
+      setError((err as Error).message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
+    areas,
+    setAreas,
     loading,
     error,
+    fetchAreas,
     createArea,
     updateArea,
-    deleteArea
+    deleteArea,
+    saveLayout
   };
 };

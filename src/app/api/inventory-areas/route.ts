@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { assertNoCycle } from "@/lib/inventoryAreas";
+import { assertNoCycle, nextFreeSlot } from "@/lib/inventoryAreas";
 
 export async function GET() {
   try {
@@ -14,7 +14,7 @@ export async function GET() {
           p.name as parent_name
         FROM inventory_areas a
         LEFT JOIN inventory_areas p ON a.parent_area_id = p.area_id
-        ORDER BY a.name
+        ORDER BY a.parent_area_id NULLS FIRST, a.map_y, a.map_x, a.name
       `);
       return NextResponse.json(result.rows);
     } finally {
@@ -51,11 +51,24 @@ export async function POST(request: NextRequest) {
       }
 
       const session = await getSessionFromRequest(request);
+      // Sin esto toda área nueva nacería en (0,0), encima de sus hermanas.
+      const slot = await nextFreeSlot(client, parent_area_id || null, type || "otro");
       const result = await client.query(
-        `INSERT INTO inventory_areas (name, type, parent_area_id, is_active, created_by)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO inventory_areas
+           (name, type, parent_area_id, is_active, created_by, map_x, map_y, map_w, map_h)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING *`,
-        [name.trim(), type || "otro", parent_area_id || null, is_active ?? true, session?.userId ?? null]
+        [
+          name.trim(),
+          type || "otro",
+          parent_area_id || null,
+          is_active ?? true,
+          session?.userId ?? null,
+          slot.map_x,
+          slot.map_y,
+          slot.map_w,
+          slot.map_h,
+        ]
       );
 
       await logAudit(session?.userId ?? null, "create", "inventory_area", result.rows[0].area_id, { name, type, parent_area_id });

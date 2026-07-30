@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { InventoryArea, InventoryAreaFormData } from '@/types';
+import { AreaLayoutItem, AreaLayoutSaveResult, InventoryArea, InventoryAreaFormData } from '@/types';
 
 export const areaService = {
   async getAll(): Promise<InventoryArea[]> {
@@ -27,6 +27,14 @@ export const areaService = {
   async delete(id: number): Promise<void> {
     await apiRequest<void>(`/api/inventory-areas/${id}`, {
       method: 'DELETE'
+    });
+  },
+
+  /** Guarda en una sola transacción la geometría (y el padre) de varias áreas. */
+  async saveLayout(items: AreaLayoutItem[]): Promise<AreaLayoutSaveResult> {
+    return apiRequest<AreaLayoutSaveResult>('/api/inventory-areas/layout', {
+      method: 'PUT',
+      body: { items }
     });
   }
 };

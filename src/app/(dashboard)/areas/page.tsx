@@ -1,33 +1,18 @@
 "use client";
-import { useEffect, useState } from "react";
-import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  IconButton,
-  Snackbar,
-  Alert,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  useMediaQuery,
-} from "@mui/material";
-import type { Theme } from "@mui/material/styles";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Box, Paper, Button, Snackbar, Alert, Tab, Tabs, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
-import { InventoryArea, InventoryAreaFormData } from "@/types";
+import type { LayoutItem } from "react-grid-layout";
+import { AreaLayoutItem, InventoryArea, InventoryAreaFormData } from "@/types";
 import { AreaForm } from "@/components/areas/AreaForm";
 import { useAreas } from "@/hooks/useAreas";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
-import { buildAreaOptions } from "@/utils/areaTree";
+import { areasToLayout, nextFreeSlotClient } from "@/utils/areaMap";
+import { AreaMapTab } from "./_components/AreaMapTab";
+import { AreasListTab } from "./_components/AreasListTab";
 
 const EMPTY_FORM: InventoryAreaFormData = {
   name: "",
@@ -36,10 +21,15 @@ const EMPTY_FORM: InventoryAreaFormData = {
   is_active: true,
 };
 
-export default function AreasPage() {
-  const [areas, setAreas] = useState<InventoryArea[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function TabPanel({ children, value, index }: { children: React.ReactNode; value: number; index: number }) {
+  if (value !== index) return null;
+  return <Box sx={{ pt: 2 }}>{children}</Box>;
+}
+
+function AreasContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingAreaId, setEditingAreaId] = useState<number | null>(null);
@@ -50,38 +40,33 @@ export default function AreasPage() {
     severity: "success" as "success" | "error",
   });
 
-  const { createArea, updateArea, deleteArea } = useAreas();
+  const { areas, loading, error, fetchAreas, createArea, updateArea, deleteArea, saveLayout } = useAreas();
   const { confirm, confirmDialog } = useConfirmDialog();
-  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
 
-  const fetchAreas = async () => {
-    try {
-      const response = await fetch("/api/inventory-areas");
-      const data = await response.json();
-      if (!response.ok) {
-        setError(typeof data === "object" && data && "error" in data ? String(data.error) : "Error al cargar las áreas");
-        setAreas([]);
-      } else if (Array.isArray(data)) {
-        setAreas(data);
-      } else {
-        setError("Respuesta inesperada del servidor al cargar áreas");
-        setAreas([]);
-      }
-      setLoading(false);
-    } catch {
-      setError("Error al cargar las áreas");
-      setLoading(false);
+  // Pestaña y nivel viven en la URL para que recargar o volver atrás no pierda
+  // el contexto del mapa.
+  const tabValue = searchParams.get("tab") === "lista" ? 1 : 0;
+  const nivel = searchParams.get("nivel");
+  const currentParentId = nivel ? Number(nivel) : null;
+
+  const setParams = (next: { tab?: string; nivel?: number | null }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.tab !== undefined) params.set("tab", next.tab);
+    if (next.nivel !== undefined) {
+      if (next.nivel === null) params.delete("nivel");
+      else params.set("nivel", String(next.nivel));
     }
+    router.replace(`/areas?${params.toString()}`, { scroll: false });
   };
 
   useEffect(() => {
     fetchAreas();
-  }, []);
+  }, [fetchAreas]);
 
-  const handleAdd = () => {
+  const handleAdd = (parentAreaId: number | null = null) => {
     setIsEditing(false);
     setEditingAreaId(null);
-    setFormData(EMPTY_FORM);
+    setFormData({ ...EMPTY_FORM, parent_area_id: parentAreaId });
     setOpenDialog(true);
   };
 
@@ -124,9 +109,7 @@ export default function AreasPage() {
     }
 
     const result =
-      isEditing && editingAreaId
-        ? await updateArea(editingAreaId, data)
-        : await createArea(data);
+      isEditing && editingAreaId ? await updateArea(editingAreaId, data) : await createArea(data);
 
     if (result) {
       setSnackbar({
@@ -137,11 +120,44 @@ export default function AreasPage() {
       setOpenDialog(false);
       fetchAreas();
     } else {
-      setSnackbar({ open: true, message: "Error al guardar el área", severity: "error" });
+      setSnackbar({ open: true, message: error || "Error al guardar el área", severity: "error" });
     }
   };
 
-  const treeOptions = buildAreaOptions(areas);
+  /**
+   * Guarda la geometría del nivel visible junto con las áreas que el usuario
+   * sacó de él arrastrándolas: a esas hay que darles una posición libre en su
+   * nivel destino antes de mandarlas.
+   */
+  const handleSaveLayout = async (
+    layout: LayoutItem[],
+    parentId: number | null,
+    reparented: Map<number, number | null>
+  ): Promise<boolean> => {
+    const items: AreaLayoutItem[] = layout.map((item) => ({
+      area_id: Number(item.i),
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+      parent_area_id: parentId,
+    }));
+
+    for (const [areaId, destinationId] of reparented) {
+      const area = areas.find((a) => a.area_id === areaId);
+      if (!area) continue;
+      const slot = nextFreeSlotClient(areasToLayout(areas, destinationId), area.type);
+      items.push({ area_id: areaId, ...slot, parent_area_id: destinationId });
+    }
+
+    const result = await saveLayout(items);
+    setSnackbar({
+      open: true,
+      message: result ? "Mapa guardado correctamente" : error || "Error al guardar el mapa",
+      severity: result ? "success" : "error",
+    });
+    return !!result;
+  };
 
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
@@ -154,7 +170,7 @@ export default function AreasPage() {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={handleAdd}
+              onClick={() => handleAdd(tabValue === 0 ? currentParentId : null)}
               sx={{ width: { xs: "100%", sm: "auto" } }}
             >
               Agregar Área
@@ -162,89 +178,38 @@ export default function AreasPage() {
           }
         />
 
-        {!loading && treeOptions.length === 0 && (
-          <Typography color="text.secondary" align="center" sx={{ mt: 2 }}>
-            No hay áreas creadas todavía.
-          </Typography>
-        )}
+        <Tabs
+          value={tabValue}
+          onChange={(_, value) => setParams({ tab: value === 1 ? "lista" : "mapa" })}
+          sx={{ borderBottom: 1, borderColor: "divider" }}
+        >
+          <Tab label="Mapa" />
+          <Tab label="Lista" />
+        </Tabs>
 
-        {treeOptions.length > 0 && isMobile && (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
-            {treeOptions.map(({ area, label }) => (
-              <Box
-                key={area.area_id}
-                sx={{
-                  p: 1.5,
-                  borderRadius: 1,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                }}
-              >
-                <Typography sx={{ fontWeight: 600 }}>{label}</Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5, flexWrap: "wrap" }}>
-                  <Chip label={area.type} size="small" variant="outlined" />
-                  <Chip
-                    label={area.is_active ? "Activa" : "Inactiva"}
-                    color={area.is_active ? "success" : "default"}
-                    size="small"
-                  />
-                </Box>
-                <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
-                  <IconButton aria-label="Editar área" size="small" onClick={() => handleEdit(area)} color="primary">
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton aria-label="Eliminar área" size="small" onClick={() => handleDelete(area.area_id)} color="error">
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
+        <TabPanel value={tabValue} index={0}>
+          <AreaMapTab
+            areas={areas}
+            loading={loading}
+            error={error}
+            currentParentId={currentParentId}
+            onNavigate={(parentId) => setParams({ nivel: parentId })}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onAdd={handleAdd}
+            onSaveLayout={handleSaveLayout}
+            onRetry={fetchAreas}
+          />
+        </TabPanel>
 
-        {treeOptions.length > 0 && !isMobile && (
-          <TableContainer sx={{ mt: 2 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Nombre</TableCell>
-                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Tipo</TableCell>
-                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Estado</TableCell>
-                  <TableCell sx={{ bgcolor: "primary.light", color: "white", fontWeight: "bold" }}>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {treeOptions.map(({ area, label }) => (
-                  <TableRow key={area.area_id} sx={{ "&:nth-of-type(even)": { bgcolor: "action.hover" } }}>
-                    <TableCell>{label}</TableCell>
-                    <TableCell>{area.type}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={area.is_active ? "Activa" : "Inactiva"}
-                        color={area.is_active ? "success" : "default"}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton aria-label="Editar área" size="small" onClick={() => handleEdit(area)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton aria-label="Eliminar área" size="small" onClick={() => handleDelete(area.area_id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-        {error && (
-          <Typography color="error" mt={2}>
-            {error}
-          </Typography>
-        )}
+        <TabPanel value={tabValue} index={1}>
+          <AreasListTab areas={areas} loading={loading} onEdit={handleEdit} onDelete={handleDelete} />
+          {error && (
+            <Typography color="error" mt={2}>
+              {error}
+            </Typography>
+          )}
+        </TabPanel>
       </Paper>
 
       {confirmDialog}
@@ -271,5 +236,14 @@ export default function AreasPage() {
         </Alert>
       </Snackbar>
     </Box>
+  );
+}
+
+// useSearchParams obliga a un límite de Suspense (mismo patrón que /login).
+export default function AreasPage() {
+  return (
+    <Suspense fallback={null}>
+      <AreasContent />
+    </Suspense>
   );
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/config/db";
 import { getSessionFromRequest } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { assertNoCycle } from "@/lib/inventoryAreas";
+import { assertNoCycle, nextFreeSlot } from "@/lib/inventoryAreas";
 
 export async function GET(
   request: NextRequest,
@@ -68,12 +68,37 @@ export async function PUT(
         }
       }
 
+      // Al cambiar de nivel, las coordenadas del mapa (relativas al padre) ya
+      // no significan nada en el destino: se recoloca en una fila libre.
+      const current = await client.query<{ parent_area_id: number | null }>(
+        "SELECT parent_area_id FROM inventory_areas WHERE area_id = $1",
+        [areaId]
+      );
+      const nextParentId = parent_area_id || null;
+      const changedParent =
+        current.rows.length > 0 && current.rows[0].parent_area_id !== nextParentId;
+      const slot = changedParent
+        ? await nextFreeSlot(client, nextParentId, type || "otro")
+        : null;
+
       const result = await client.query(
         `UPDATE inventory_areas
-         SET name = $1, type = $2, parent_area_id = $3, is_active = $4
+         SET name = $1, type = $2, parent_area_id = $3, is_active = $4,
+             map_x = COALESCE($6, map_x), map_y = COALESCE($7, map_y),
+             map_w = COALESCE($8, map_w), map_h = COALESCE($9, map_h)
          WHERE area_id = $5
          RETURNING *`,
-        [name.trim(), type || "otro", parent_area_id || null, is_active ?? true, areaId]
+        [
+          name.trim(),
+          type || "otro",
+          nextParentId,
+          is_active ?? true,
+          areaId,
+          slot?.map_x ?? null,
+          slot?.map_y ?? null,
+          slot?.map_w ?? null,
+          slot?.map_h ?? null,
+        ]
       );
 
       if (result.rows.length === 0) {

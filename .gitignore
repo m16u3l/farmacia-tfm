@@ -49,3 +49,4 @@ next-env.d.ts
 
 # dumps de db/scripts/backup.sh (pueden contener datos reales)
 /db/backups/
+.env*

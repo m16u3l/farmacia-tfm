@@ -111,8 +111,23 @@ CREATE TABLE IF NOT EXISTS inventory_areas (
   -- Postgres no lo puede verificar solo con una FK/CHECK.
   parent_area_id INTEGER REFERENCES inventory_areas(area_id) ON DELETE RESTRICT,
   is_active      BOOLEAN NOT NULL DEFAULT TRUE,
+  -- Posición y tamaño de la tarjeta en el "Mapa de almacén" (/areas, pestaña
+  -- Mapa), sobre una cuadrícula de 12 columnas y RELATIVAS AL ÁREA PADRE: el
+  -- mapa dibuja un nivel a la vez, así que mover un área a otro padre no
+  -- invalida las coordenadas de su subárbol.
+  map_x          SMALLINT NOT NULL DEFAULT 0,
+  map_y          SMALLINT NOT NULL DEFAULT 0,
+  map_w          SMALLINT NOT NULL DEFAULT 3,
+  map_h          SMALLINT NOT NULL DEFAULT 4,
   created_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  created_at     TIMESTAMP NOT NULL DEFAULT NOW()
+  created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT inventory_areas_map_bounds_chk CHECK (
+    map_x >= 0 AND map_y >= 0
+    AND map_w BETWEEN 1 AND 12
+    AND map_h BETWEEN 1 AND 48
+    AND map_x + map_w <= 12
+    AND map_y + map_h <= 200
+  )
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_areas_parent_area_id ON inventory_areas(parent_area_id);

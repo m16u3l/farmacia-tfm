@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   Chip,
-  ChipProps,
   CircularProgress,
   Grid,
   LinearProgress,
@@ -17,17 +16,10 @@ import {
 import VerifiedIcon from "@mui/icons-material/Verified";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import BuildIcon from "@mui/icons-material/Build";
-import { AreaCoverage, AreaCoverageStatus, InventoryArea, ValidationCoverage } from "@/types";
+import { AreaCoverage, InventoryArea, ValidationCoverage } from "@/types";
 import { useValidations } from "@/hooks/useValidations";
 import { buildAreaOptions } from "@/utils/areaTree";
-
-const COVERAGE_STATUS_LABELS: Record<AreaCoverageStatus, { label: string; color: ChipProps["color"] }> = {
-  validated: { label: "Validada", color: "success" },
-  due_soon: { label: "Por vencer", color: "warning" },
-  overdue: { label: "Vencida", color: "error" },
-  never: { label: "Nunca validada", color: "error" },
-  no_stock: { label: "Sin stock", color: "default" },
-};
+import { COVERAGE_STATUS_LABELS } from "@/utils/validationLabels";
 
 // Orden de urgencia para "Validar siguiente" y para el listado: primero las
 // nunca validadas, luego las vencidas (más antigua primero), luego las por
