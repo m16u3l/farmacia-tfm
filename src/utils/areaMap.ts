@@ -133,6 +133,38 @@ export function pathTo(areas: InventoryArea[], areaId: number | null): Inventory
   return path;
 }
 
+/**
+ * Lotes con existencias de un área y de todas sus sub-áreas. La cobertura solo
+ * informa el stock directo, así que un almacén cuyo contenido está en sus
+ * estantes se vería como "Sin stock" si se usara ese número tal cual.
+ */
+export function subtreeLots(
+  areas: InventoryArea[],
+  lotsByArea: Map<number, number>,
+  areaId: number
+): number {
+  const byParent = new Map<number, number[]>();
+  for (const area of areas) {
+    const parentId = area.parent_area_id ?? null;
+    if (parentId === null) continue;
+    if (!byParent.has(parentId)) byParent.set(parentId, []);
+    byParent.get(parentId)!.push(area.area_id);
+  }
+
+  let total = 0;
+  const pending = [areaId];
+  const seen = new Set<number>();
+
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    if (seen.has(current)) continue;
+    seen.add(current);
+    total += lotsByArea.get(current) ?? 0;
+    pending.push(...(byParent.get(current) ?? []));
+  }
+  return total;
+}
+
 /** Profundidad (1 = raíz) que tendría un área colgada de `parentId`. */
 export function depthOf(areas: InventoryArea[], parentId: number | null): number {
   return pathTo(areas, parentId).length + 1;

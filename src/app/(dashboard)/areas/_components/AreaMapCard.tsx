@@ -10,6 +10,7 @@ import DriveFileMoveOutlinedIcon from "@mui/icons-material/DriveFileMoveOutlined
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import { AreaCoverage, InventoryArea } from "@/types";
 import { COVERAGE_STATUS_LABELS } from "@/utils/validationLabels";
+import { subtreeLots } from "@/utils/areaMap";
 import { AreaMiniMap } from "./AreaMiniMap";
 
 /** Nombre del área que agrupa los lotes sin ubicación (migración 021). */
@@ -48,6 +49,11 @@ export function AreaMapCard({
   const theme = useTheme();
   const status = coverage?.status;
   const statusInfo = status ? COVERAGE_STATUS_LABELS[status] : null;
+  const directLots = coverage?.active_lots ?? 0;
+  const lotsByArea = new Map(
+    [...coverageByArea].map(([id, item]) => [id, item.active_lots])
+  );
+  const subtreeLotCount = subtreeLots(areas, lotsByArea, area.area_id);
   const isUnclassified = area.name === UNCLASSIFIED_AREA_NAME && !area.parent_area_id;
   const accent = isUnclassified ? theme.palette.secondary.main : theme.palette.primary.main;
 
@@ -144,7 +150,9 @@ export function AreaMapCard({
       </Box>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap", mt: 0.5 }}>
-        {statusInfo && (
+        {/* "Sin stock" solo si tampoco hay nada en las sub-áreas: si no, un
+            almacén lleno se leería como vacío y su borrado parecería un bug. */}
+        {statusInfo && !(status === "no_stock" && subtreeLotCount > 0) && (
           <Chip
             label={statusInfo.label}
             color={statusInfo.color}
@@ -155,11 +163,21 @@ export function AreaMapCard({
         {!area.is_active && (
           <Chip label="Inactiva" size="small" variant="outlined" sx={{ height: 18, fontSize: 10 }} />
         )}
-        {coverage && coverage.active_lots > 0 && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, color: "text.secondary" }}>
-            <Inventory2OutlinedIcon sx={{ fontSize: 13 }} />
-            <Typography sx={{ fontSize: 11 }}>{coverage.active_lots}</Typography>
-          </Box>
+        {subtreeLotCount > 0 && (
+          <Tooltip
+            title={
+              directLots === subtreeLotCount
+                ? `${directLots} lotes con existencias`
+                : `${directLots} lotes aquí, ${subtreeLotCount} contando sus sub-áreas`
+            }
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, color: "text.secondary" }}>
+              <Inventory2OutlinedIcon sx={{ fontSize: 13 }} />
+              <Typography sx={{ fontSize: 11 }}>
+                {directLots === subtreeLotCount ? subtreeLotCount : `${directLots}/${subtreeLotCount}`}
+              </Typography>
+            </Box>
+          </Tooltip>
         )}
       </Box>
 

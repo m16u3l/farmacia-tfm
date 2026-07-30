@@ -10,6 +10,7 @@ import {
   nextFreeSlotClient,
   pathTo,
   sameLayout,
+  subtreeLots,
 } from '../areaMap';
 
 function area(
@@ -138,6 +139,30 @@ describe('isDescendant', () => {
     expect(isDescendant(AREAS, 10, 10)).toBe(false);
     expect(isDescendant(AREAS, 10, 11)).toBe(false);
     expect(isDescendant(AREAS, 1, 10)).toBe(false);
+  });
+});
+
+describe('subtreeLots', () => {
+  // Estante A (10) tiene 2 lotes propios y su apartado 100 tiene 3.
+  const lots = new Map<number, number>([
+    [1, 0],
+    [10, 2],
+    [11, 0],
+    [100, 3],
+  ]);
+
+  it('suma los lotes propios y los de todo el subárbol', () => {
+    expect(subtreeLots(AREAS, lots, 1)).toBe(5);
+    expect(subtreeLots(AREAS, lots, 10)).toBe(5);
+  });
+
+  it('devuelve solo los propios cuando el área es una hoja', () => {
+    expect(subtreeLots(AREAS, lots, 100)).toBe(3);
+    expect(subtreeLots(AREAS, lots, 11)).toBe(0);
+  });
+
+  it('trata como cero las áreas ausentes del mapa de cobertura', () => {
+    expect(subtreeLots(AREAS, new Map(), 1)).toBe(0);
   });
 });
 

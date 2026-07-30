@@ -40,7 +40,8 @@ function AreasContent() {
     severity: "success" as "success" | "error",
   });
 
-  const { areas, loading, error, fetchAreas, createArea, updateArea, deleteArea, saveLayout } = useAreas();
+  const { areas, loading, loadError, fetchAreas, createArea, updateArea, deleteArea, saveLayout } =
+    useAreas();
   const { confirm, confirmDialog } = useConfirmDialog();
 
   // Pestaña y nivel viven en la URL para que recargar o volver atrás no pierda
@@ -88,13 +89,13 @@ function AreasContent() {
       message: "¿Estás seguro de que quieres eliminar esta área de inventario?",
     });
     if (confirmed) {
-      const success = await deleteArea(id);
-      if (success) {
-        setSnackbar({ open: true, message: "Área eliminada correctamente", severity: "success" });
-        fetchAreas();
-      } else {
-        setSnackbar({ open: true, message: "Error al eliminar el área", severity: "error" });
-      }
+      const { ok, error: deleteError } = await deleteArea(id);
+      setSnackbar({
+        open: true,
+        message: ok ? "Área eliminada correctamente" : deleteError || "Error al eliminar el área",
+        severity: ok ? "success" : "error",
+      });
+      if (ok) fetchAreas();
     }
   };
 
@@ -108,10 +109,10 @@ function AreasContent() {
       return;
     }
 
-    const result =
+    const { area, error: submitError } =
       isEditing && editingAreaId ? await updateArea(editingAreaId, data) : await createArea(data);
 
-    if (result) {
+    if (area) {
       setSnackbar({
         open: true,
         message: isEditing ? "Área actualizada correctamente" : "Área creada correctamente",
@@ -120,7 +121,7 @@ function AreasContent() {
       setOpenDialog(false);
       fetchAreas();
     } else {
-      setSnackbar({ open: true, message: error || "Error al guardar el área", severity: "error" });
+      setSnackbar({ open: true, message: submitError || "Error al guardar el área", severity: "error" });
     }
   };
 
@@ -150,10 +151,10 @@ function AreasContent() {
       items.push({ area_id: areaId, ...slot, parent_area_id: destinationId });
     }
 
-    const result = await saveLayout(items);
+    const { result, error: saveError } = await saveLayout(items);
     setSnackbar({
       open: true,
-      message: result ? "Mapa guardado correctamente" : error || "Error al guardar el mapa",
+      message: result ? "Mapa guardado correctamente" : saveError || "Error al guardar el mapa",
       severity: result ? "success" : "error",
     });
     return !!result;
@@ -191,7 +192,7 @@ function AreasContent() {
           <AreaMapTab
             areas={areas}
             loading={loading}
-            error={error}
+            error={loadError}
             currentParentId={currentParentId}
             onNavigate={(parentId) => setParams({ nivel: parentId })}
             onEdit={handleEdit}
@@ -204,9 +205,9 @@ function AreasContent() {
 
         <TabPanel value={tabValue} index={1}>
           <AreasListTab areas={areas} loading={loading} onEdit={handleEdit} onDelete={handleDelete} />
-          {error && (
+          {loadError && (
             <Typography color="error" mt={2}>
-              {error}
+              {loadError}
             </Typography>
           )}
         </TabPanel>

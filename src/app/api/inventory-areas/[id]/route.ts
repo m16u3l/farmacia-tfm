@@ -133,15 +133,63 @@ export async function DELETE(
   try {
     const client = await pool.connect();
     try {
-      const inventoryCount = await client.query(
-        "SELECT count(*) FROM inventory WHERE area_id = $1",
+      await client.query("BEGIN");
+
+      // Solo el stock real impide borrar. Los lotes agotados (cantidad 0) no
+      // se ven en ninguna parte de la UI —la cobertura solo cuenta los que
+      // tienen existencias—, así que bloquear por ellos daba un error
+      // imposible de accionar: el área figuraba "Sin stock" y aun así no se
+      // dejaba eliminar.
+      const stock = await client.query<{ lotes: number; unidades: number; vacios: number }>(
+        `SELECT
+           count(*) FILTER (WHERE quantity_available > 0)::int AS lotes,
+           COALESCE(sum(quantity_available), 0)::int AS unidades,
+           count(*) FILTER (WHERE quantity_available = 0)::int AS vacios
+         FROM inventory WHERE area_id = $1`,
         [areaId]
       );
-      if (Number(inventoryCount.rows[0].count) > 0) {
+      const { lotes, unidades, vacios } = stock.rows[0];
+
+      if (lotes > 0) {
+        await client.query("ROLLBACK");
         return NextResponse.json(
-          { error: "No se puede eliminar: el área todavía tiene inventario asignado" },
+          {
+            error:
+              `No se puede eliminar: el área todavía tiene ${lotes} lote${lotes === 1 ? "" : "s"} ` +
+              `con ${unidades} unidad${unidades === 1 ? "" : "es"}. ` +
+              `Transfiérelos a otra área desde Inventario antes de eliminarla.`,
+          },
           { status: 409 }
         );
+      }
+
+      // Los lotes agotados sí hay que reubicarlos: la FK es ON DELETE SET NULL
+      // y un lote sin área queda invisible para las validaciones (por eso la
+      // migración 021 creó "Por clasificar").
+      if (vacios > 0) {
+        const fallback = await client.query<{ area_id: number }>(
+          `SELECT area_id FROM inventory_areas
+           WHERE name = 'Por clasificar' AND parent_area_id IS NULL
+           LIMIT 1`
+        );
+        const fallbackId = fallback.rows[0]?.area_id;
+
+        if (!fallbackId || fallbackId === areaId) {
+          await client.query("ROLLBACK");
+          return NextResponse.json(
+            {
+              error:
+                `No se puede eliminar: el área tiene ${vacios} lote${vacios === 1 ? "" : "s"} agotado${vacios === 1 ? "" : "s"} ` +
+                `y no hay un área "Por clasificar" a donde reubicarlos.`,
+            },
+            { status: 409 }
+          );
+        }
+
+        await client.query("UPDATE inventory SET area_id = $1 WHERE area_id = $2", [
+          fallbackId,
+          areaId,
+        ]);
       }
 
       let result;
@@ -151,6 +199,7 @@ export async function DELETE(
           [areaId]
         );
       } catch (dbError: unknown) {
+        await client.query("ROLLBACK");
         if ((dbError as { code?: string }).code === "23503") {
           return NextResponse.json(
             { error: "No se puede eliminar: el área todavía tiene sub-áreas" },
@@ -161,16 +210,30 @@ export async function DELETE(
       }
 
       if (result.rows.length === 0) {
+        await client.query("ROLLBACK");
         return NextResponse.json(
           { error: "Área de inventario no encontrada" },
           { status: 404 }
         );
       }
 
-      const session = await getSessionFromRequest(request);
-      await logAudit(session?.userId ?? null, "delete", "inventory_area", areaId);
+      await client.query("COMMIT");
 
-      return NextResponse.json({ message: "Área de inventario eliminada correctamente" });
+      const session = await getSessionFromRequest(request);
+      await logAudit(session?.userId ?? null, "delete", "inventory_area", areaId, {
+        name: result.rows[0].name,
+        lotes_agotados_reubicados: vacios,
+      });
+
+      return NextResponse.json({
+        message:
+          vacios > 0
+            ? `Área eliminada. ${vacios} lote${vacios === 1 ? "" : "s"} agotado${vacios === 1 ? "" : "s"} se movió a "Por clasificar".`
+            : "Área de inventario eliminada correctamente",
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
     } finally {
       client.release();
     }

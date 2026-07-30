@@ -155,6 +155,35 @@ test.describe('Mapa de áreas', () => {
     await expect(page.getByRole('button', { name: 'Mover a otra área' })).toBeVisible();
   });
 
+  test('al no poder eliminar, explica el motivo sin tumbar el mapa', async ({ page }) => {
+    await login(page);
+
+    // Un área con stock real: el borrado debe rechazarse con el detalle.
+    const inventory = await (await page.request.get('/api/inventory')).json();
+    const conStock = inventory.find(
+      (i: { area_id: number | null; quantity_available: number }) =>
+        i.area_id != null && i.quantity_available > 0
+    );
+    test.skip(!conStock, 'Se necesita un lote con existencias');
+
+    const areas = await fetchAreas(page.request);
+    const area = areas.find((a) => a.area_id === conStock.area_id)!;
+
+    await page.goto(
+      area.parent_area_id ? `/areas?nivel=${area.parent_area_id}` : '/areas'
+    );
+    const card = page.locator(`[data-area-id="${area.area_id}"]`);
+    await expect(card).toBeVisible();
+
+    await card.getByRole('button', { name: `Eliminar ${area.name}` }).click();
+    await page.getByRole('button', { name: 'Eliminar' }).click();
+
+    // El mensaje debe decir cuánto hay, no un genérico "tiene inventario".
+    await expect(page.getByText(/todavía tiene \d+ lote/)).toBeVisible();
+    // Y el mapa debe seguir en pie: un fallo de borrado no es un fallo de carga.
+    await expect(card).toBeVisible();
+  });
+
   test('el cajero no puede guardar el mapa', async ({ page }) => {
     await login(page, CAJERO_EMAIL, CAJERO_PASSWORD);
 

@@ -4,18 +4,25 @@ import { AreaLayoutItem, AreaLayoutSaveResult, InventoryArea, InventoryAreaFormD
 
 export const useAreas = () => {
   const [areas, setAreas] = useState<InventoryArea[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Arranca en true: hasta que fetchAreas responda, `areas` está vacío por no
+  // haber cargado todavía, no por no haber áreas. Con false, la vista mostraba
+  // "No hay áreas creadas todavía" durante el primer render.
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Separado de `error`: solo un fallo al cargar deja la vista sin datos y
+  // justifica reemplazarla por un aviso. El fallo de una mutación se comunica
+  // sin desmontar lo que ya está en pantalla.
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchAreas = useCallback(async (): Promise<InventoryArea[] | null> => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await areaService.getAll();
       setAreas(data);
       return data;
     } catch (err) {
-      setError((err as Error).message);
+      setLoadError((err as Error).message);
       setAreas([]);
       return null;
     } finally {
@@ -23,58 +30,73 @@ export const useAreas = () => {
     }
   }, []);
 
-  const createArea = async (data: InventoryAreaFormData): Promise<InventoryArea | null> => {
+  const createArea = async (
+    data: InventoryAreaFormData
+  ): Promise<{ area: InventoryArea | null; error: string | null }> => {
     setLoading(true);
     setError(null);
     try {
-      const newArea = await areaService.create(data);
-      return newArea;
+      return { area: await areaService.create(data), error: null };
     } catch (err) {
-      setError((err as Error).message);
-      return null;
+      const message = (err as Error).message;
+      setError(message);
+      return { area: null, error: message };
     } finally {
       setLoading(false);
     }
   };
 
-  const updateArea = async (id: number, data: InventoryAreaFormData): Promise<InventoryArea | null> => {
+  const updateArea = async (
+    id: number,
+    data: InventoryAreaFormData
+  ): Promise<{ area: InventoryArea | null; error: string | null }> => {
     setLoading(true);
     setError(null);
     try {
-      const updatedArea = await areaService.update(id, data);
-      return updatedArea;
+      return { area: await areaService.update(id, data), error: null };
     } catch (err) {
-      setError((err as Error).message);
-      return null;
+      const message = (err as Error).message;
+      setError(message);
+      return { area: null, error: message };
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteArea = async (id: number): Promise<boolean> => {
+  /**
+   * Devuelve el mensaje del servidor junto al resultado: leerlo del estado
+   * `error` justo después del await da el valor viejo del render anterior, y
+   * aquí el motivo del rechazo ("tiene N lotes con M unidades") es justamente
+   * lo que el usuario necesita ver.
+   */
+  const deleteArea = async (id: number): Promise<{ ok: boolean; error: string | null }> => {
     setLoading(true);
     setError(null);
     try {
       await areaService.delete(id);
-      return true;
+      return { ok: true, error: null };
     } catch (err) {
-      setError((err as Error).message);
-      return false;
+      const message = (err as Error).message;
+      setError(message);
+      return { ok: false, error: message };
     } finally {
       setLoading(false);
     }
   };
 
-  const saveLayout = async (items: AreaLayoutItem[]): Promise<AreaLayoutSaveResult | null> => {
+  const saveLayout = async (
+    items: AreaLayoutItem[]
+  ): Promise<{ result: AreaLayoutSaveResult | null; error: string | null }> => {
     setLoading(true);
     setError(null);
     try {
       const result = await areaService.saveLayout(items);
       setAreas(result.areas);
-      return result;
+      return { result, error: null };
     } catch (err) {
-      setError((err as Error).message);
-      return null;
+      const message = (err as Error).message;
+      setError(message);
+      return { result: null, error: message };
     } finally {
       setLoading(false);
     }
@@ -85,6 +107,7 @@ export const useAreas = () => {
     setAreas,
     loading,
     error,
+    loadError,
     fetchAreas,
     createArea,
     updateArea,
