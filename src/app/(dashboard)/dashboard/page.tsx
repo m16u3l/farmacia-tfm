@@ -96,7 +96,7 @@ export default function DashboardHomePage() {
 
   if (stats.validationCoverage !== null) {
     cards.push({
-      label: "Inventario validado",
+      label: "Inventario validado este mes",
       value: `${stats.validationCoverage}%`,
       icon: <FactCheckOutlinedIcon />,
       href: "/inventory-validations",

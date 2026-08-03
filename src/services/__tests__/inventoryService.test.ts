@@ -93,18 +93,6 @@ describe('inventoryService', () => {
     })
   })
 
-  describe('getLowStock', () => {
-    it('should return low stock items', async () => {
-      const mockLowStockItems = [mockInventory]
-      mockApiRequest.mockResolvedValue(mockLowStockItems)
-
-      const result = await inventoryService.getLowStock(10)
-
-      expect(mockApiRequest).toHaveBeenCalledWith('/api/inventory?low_stock=10')
-      expect(result).toEqual(mockLowStockItems)
-    })
-  })
-
   describe('getByProduct', () => {
     it('should return inventory items by product', async () => {
       const mockProductInventory = [mockInventory]

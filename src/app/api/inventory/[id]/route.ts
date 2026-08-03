@@ -56,6 +56,7 @@ export async function PUT(
       product_id,
       batch_number,
       expiry_date,
+      expiry_alert_days,
       quantity_available,
       area_id,
       purchase_price,
@@ -77,11 +78,11 @@ export async function PUT(
       const result = await client.query(
         `UPDATE inventory
          SET product_id = $1, batch_number = $2, expiry_date = $3,
-             quantity_available = $4, area_id = $5, purchase_price = $6,
-             sale_price = $7, expiry_is_approximate = FALSE
-         WHERE inventory_id = $8
+             expiry_alert_days = $4, quantity_available = $5, area_id = $6,
+             purchase_price = $7, sale_price = $8, expiry_is_approximate = FALSE
+         WHERE inventory_id = $9
          RETURNING *`,
-        [product_id, batch_number, expiry_date, quantity_available, area_id, purchase_price, sale_price, params.id]
+        [product_id, batch_number, expiry_date, expiry_alert_days ?? null, quantity_available, area_id, purchase_price, sale_price, params.id]
       );
 
       if (result.rows.length === 0) {

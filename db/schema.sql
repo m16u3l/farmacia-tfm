@@ -143,6 +143,9 @@ CREATE TABLE IF NOT EXISTS inventory (
   -- TRUE cuando el vencimiento se aproximó (ej. solo se conocía el año) y
   -- conviene confirmarlo con el proveedor o el empaque físico.
   expiry_is_approximate    BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Días de anticipación de la alerta de vencimiento propios del lote;
+  -- NULL = usar el global de configuracion.expiry_alert_days
+  expiry_alert_days        INTEGER CHECK (expiry_alert_days IS NULL OR expiry_alert_days >= 0),
   quantity_available       INTEGER NOT NULL DEFAULT 0 CHECK (quantity_available >= 0),
   -- SET NULL (no RESTRICT): borrar un área no debe bloquearse solo por stock
   -- histórico; la API bloquea el DELETE de áreas con inventario activo antes
@@ -299,9 +302,9 @@ CREATE TABLE IF NOT EXISTS configuracion (
   id                      SERIAL PRIMARY KEY,
   low_stock_threshold     INTEGER NOT NULL DEFAULT 10 CHECK (low_stock_threshold >= 0),
   expiry_alert_days       INTEGER NOT NULL DEFAULT 40 CHECK (expiry_alert_days >= 0),
-  -- Días durante los que una validación de área conciliada se considera
-  -- vigente para la cobertura de inventario (30 = ciclo de conteo mensual).
-  validation_period_days  INTEGER NOT NULL DEFAULT 30 CHECK (validation_period_days >= 1),
+  -- Día del mes hasta el que hay plazo para validar cada área: el conteo es
+  -- mensual y se hace en los primeros días (10 = primeros diez días del mes).
+  validation_due_day      INTEGER NOT NULL DEFAULT 10 CHECK (validation_due_day BETWEEN 1 AND 28),
   updated_at              TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

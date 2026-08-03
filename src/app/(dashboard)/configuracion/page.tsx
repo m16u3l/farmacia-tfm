@@ -13,14 +13,10 @@ import {
 import SettingsIcon from "@mui/icons-material/SettingsOutlined";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fluidFontSize } from "@/utils/fluidType";
-import { ConfiguracionFormData } from "@/types/configuracion";
+import { ConfiguracionFormData, DEFAULT_THRESHOLDS } from "@/types/configuracion";
 
 export default function ConfiguracionPage() {
-  const [form, setForm] = useState<ConfiguracionFormData>({
-    low_stock_threshold: 10,
-    expiry_alert_days: 40,
-    validation_period_days: 30,
-  });
+  const [form, setForm] = useState<ConfiguracionFormData>(DEFAULT_THRESHOLDS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -35,7 +31,7 @@ export default function ConfiguracionPage() {
         setForm({
           low_stock_threshold: data.low_stock_threshold,
           expiry_alert_days: data.expiry_alert_days,
-          validation_period_days: data.validation_period_days,
+          validation_due_day: data.validation_due_day,
         });
       }
     } catch (error) {
@@ -113,7 +109,7 @@ export default function ConfiguracionPage() {
             }
             required
             disabled={saving}
-            helperText="Cantidad disponible igual o menor a esta se considera 'bajo stock' en Validación de Inventario"
+            helperText="Cantidad disponible igual o menor a esta se considera 'bajo stock'. Valor por defecto: cada producto puede tener su propio umbral desde Productos"
             sx={{ mb: 3 }}
             slotProps={{ htmlInput: { min: 0 } }}
           />
@@ -128,24 +124,24 @@ export default function ConfiguracionPage() {
             }
             required
             disabled={saving}
-            helperText="Lotes que vencen dentro de estos días se consideran 'próximos a vencer'"
+            helperText="Lotes que vencen dentro de estos días se consideran 'próximos a vencer'. Valor por defecto: cada lote puede tener sus propios días desde Inventario"
             sx={{ mb: 3 }}
             slotProps={{ htmlInput: { min: 0 } }}
           />
 
           <TextField
             fullWidth
-            label="Vigencia de una validación de inventario (días)"
+            label="Día del mes límite para validar el inventario"
             type="number"
-            value={form.validation_period_days}
+            value={form.validation_due_day}
             onChange={(e) =>
-              setForm((f) => ({ ...f, validation_period_days: Number(e.target.value) }))
+              setForm((f) => ({ ...f, validation_due_day: Number(e.target.value) }))
             }
             required
             disabled={saving}
-            helperText="Un área validada vuelve a quedar pendiente pasados estos días (30 = conteo mensual)"
+            helperText="Cada área se cuenta una vez al mes: al día 1 quedan todas pendientes y pasado este día se marcan fuera de plazo (10 = primeros diez días)"
             sx={{ mb: 3 }}
-            slotProps={{ htmlInput: { min: 1 } }}
+            slotProps={{ htmlInput: { min: 1, max: 28 } }}
           />
 
           <Button

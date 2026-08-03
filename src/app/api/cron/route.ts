@@ -22,11 +22,11 @@ export async function GET(request: NextRequest) {
        WHERE expiry_date IS NOT NULL AND expiry_date < CURRENT_DATE AND quantity_available > 0`
     ),
     pool.query(
-      `SELECT COUNT(*)::int AS count FROM inventory
-       WHERE expiry_date IS NOT NULL
-         AND expiry_date >= CURRENT_DATE
-         AND expiry_date <= CURRENT_DATE + ($1 || ' days')::interval
-         AND quantity_available > 0`,
+      `SELECT COUNT(*)::int AS count FROM inventory i
+       WHERE i.expiry_date IS NOT NULL
+         AND i.expiry_date >= CURRENT_DATE
+         AND i.expiry_date <= CURRENT_DATE + (COALESCE(i.expiry_alert_days, $1) || ' days')::interval
+         AND i.quantity_available > 0`,
       [expiry_alert_days]
     ),
     pool.query(

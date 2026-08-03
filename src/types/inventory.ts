@@ -6,6 +6,9 @@ export interface Inventory {
   batch_number?: string | null;
   expiry_date?: string | null;
   expiry_is_approximate?: boolean;
+  // Días de anticipación de la alerta de vencimiento propios del lote;
+  // null = usar el global de configuración
+  expiry_alert_days?: number | null;
   quantity_available: number;
   area_id?: number | null;
   purchase_price: number;
@@ -19,6 +22,7 @@ export interface Inventory {
   product_concentration?: string | null;  // For joined queries
   product_barcode?: string | null;  // For joined queries
   product_sale_control?: SaleControl | null;  // For joined queries
+  product_low_stock_threshold?: number | null;  // For joined queries — null = usar el global
   area_name?: string;  // For joined queries
   area_full_path?: string;  // For joined queries — "Padre › Hijo › Nieto"
 }

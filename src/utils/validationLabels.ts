@@ -28,9 +28,9 @@ export const COVERAGE_STATUS_LABELS: Record<
   AreaCoverageStatus,
   { label: string; color: "default" | "success" | "warning" | "error" | "info" }
 > = {
-  validated: { label: "Validada", color: "success" },
-  due_soon: { label: "Por vencer", color: "warning" },
-  overdue: { label: "Vencida", color: "error" },
+  validated: { label: "Validada este mes", color: "success" },
+  due_soon: { label: "Pendiente del mes", color: "warning" },
+  overdue: { label: "Fuera de plazo", color: "error" },
   never: { label: "Nunca validada", color: "error" },
   no_stock: { label: "Sin stock", color: "default" },
 };

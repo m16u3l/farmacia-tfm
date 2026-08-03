@@ -38,17 +38,26 @@ import { Inventory, InventoryArea, InventoryFormData, Product, TransferReason } 
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { TransferDialog } from "@/components/inventory/TransferDialog";
 import { useInventory } from "@/hooks/useInventory";
+import { useConfiguracion } from "@/hooks/useConfiguracion";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { GridEmptyState } from "@/components/common/GridEmptyState";
 import { buildAreaOptions } from "@/utils/areaTree";
 import { smartSearch } from "@/utils/smartSearch";
 import { fluidFontSize } from "@/utils/fluidType";
+import {
+  isExpired,
+  isAboutToExpire,
+  isLowStock,
+  resolveExpiryAlertDays,
+  resolveLowStockThreshold,
+} from "@/utils/stockAlerts";
 
 const EMPTY_FORM: InventoryFormData = {
   product_id: 0,
   batch_number: null,
   expiry_date: null,
+  expiry_alert_days: null,
   quantity_available: 0,
   area_id: null,
   purchase_price: 0,
@@ -77,6 +86,7 @@ export default function InventoryPage() {
   });
 
   const { createInventoryItem, updateInventoryItem, deleteInventoryItem, transferInventoryItem } = useInventory();
+  const { thresholds } = useConfiguracion();
   const { confirm, confirmDialog } = useConfirmDialog();
   const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"));
 
@@ -156,6 +166,7 @@ export default function InventoryPage() {
       product_id: item.product_id,
       batch_number: item.batch_number,
       expiry_date: item.expiry_date,
+      expiry_alert_days: item.expiry_alert_days ?? null,
       quantity_available: item.quantity_available,
       area_id: item.area_id,
       purchase_price: item.purchase_price,
@@ -262,28 +273,24 @@ export default function InventoryPage() {
 
   const getItemLocation = (item: Inventory) => item.area_full_path || item.area_name || "Sin asignar";
 
-  const isLowStock = (quantity: number) => {
-    return quantity > 0 && quantity <= 10; // Bajo stock: 10 o menos, sin contar agotados
-  };
+  // Umbral propio del producto/lote si lo tiene, si no el global de Configuración
+  // (misma cascada que los COALESCE de las queries del servidor).
+  const isItemLowStock = (item: Inventory) =>
+    item.quantity_available > 0 && // Bajo stock sin contar agotados
+    isLowStock(
+      item.quantity_available,
+      resolveLowStockThreshold(item.product_low_stock_threshold, thresholds.low_stock_threshold)
+    );
 
-  const isExpired = (expiryDate: string | null) => {
-    if (!expiryDate) return false;
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    return expiry < today;
-  };
+  const isItemAboutToExpire = (item: Inventory) =>
+    isAboutToExpire(
+      item.expiry_date,
+      resolveExpiryAlertDays(item.expiry_alert_days, thresholds.expiry_alert_days)
+    );
 
-  const isAboutToExpire = (expiryDate: string | null) => {
-    if (!expiryDate) return false;
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 40 && daysUntilExpiry >= 0; // About to expire within 40 days
-  };
-
-  const lowStockItems = inventory.filter(item => isLowStock(item.quantity_available));
-  const expiringItems = inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isAboutToExpire(item.expiry_date));
-  const expiredItems = inventory.filter(item => item.quantity_available > 0 && item.expiry_date && isExpired(item.expiry_date));
+  const lowStockItems = inventory.filter(isItemLowStock);
+  const expiringItems = inventory.filter(item => item.quantity_available > 0 && isItemAboutToExpire(item));
+  const expiredItems = inventory.filter(item => item.quantity_available > 0 && isExpired(item.expiry_date));
 
   const ALERT_ROW_LIMIT = 5;
 
@@ -414,8 +421,8 @@ export default function InventoryPage() {
       flex: 1.5,
       minWidth: 120,
       renderCell: (params: GridRenderCellParams) => {
-        const expired = params.value && isExpired(params.value);
-        const aboutToExpire = params.value && !expired && isAboutToExpire(params.value);
+        const expired = isExpired(params.value);
+        const aboutToExpire = !expired && isItemAboutToExpire(params.row);
         
         return (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
@@ -469,7 +476,7 @@ export default function InventoryPage() {
           <Typography variant="body2" sx={{ fontSize: fluidFontSize(0.75, 0.875) }}>
             {params.value}
           </Typography>
-          {isLowStock(params.value) && (
+          {isItemLowStock(params.row) && (
             <Chip
               icon={<WarningIcon />}
               label="Bajo"

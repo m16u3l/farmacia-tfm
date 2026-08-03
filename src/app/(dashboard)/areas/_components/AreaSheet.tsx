@@ -84,11 +84,11 @@ export function AreaSheet({
             {coverage && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 {coverage.active_lots} lote{coverage.active_lots === 1 ? "" : "s"} con existencias
-                {coverage.days_remaining !== null &&
+                {coverage.status !== "no_stock" &&
                   ` · ${
-                    coverage.days_remaining > 0
-                      ? `${coverage.days_remaining} días de vigencia`
-                      : "validación vencida"
+                    coverage.validated_this_period
+                      ? "validada este mes"
+                      : "pendiente de validar este mes"
                   }`}
               </Typography>
             )}

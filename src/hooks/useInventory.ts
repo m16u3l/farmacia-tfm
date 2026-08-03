@@ -62,20 +62,6 @@ export const useInventory = () => {
     }
   };
 
-  const getLowStock = async (threshold: number = 10): Promise<Inventory[]> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const items = await inventoryService.getLowStock(threshold);
-      return items;
-    } catch (err) {
-      setError((err as Error).message);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const transferInventoryItem = async (
     id: number,
     data: { destination_area_id: number; quantity: number; reason: TransferReason; notes?: string }
@@ -99,7 +85,6 @@ export const useInventory = () => {
     updateInventoryItem,
     deleteInventoryItem,
     getInventoryById,
-    getLowStock,
     transferInventoryItem
   };
 };

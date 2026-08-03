@@ -23,6 +23,7 @@ import {
 import DownloadIcon from "@mui/icons-material/Download";
 import AssessmentIcon from "@mui/icons-material/AssessmentOutlined";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { TopProductsTab } from "./_components/TopProductsTab";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -209,7 +210,7 @@ export default function ReportsPage() {
       <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <PageHeader
           title="Reportes"
-          subtitle="Desempeño de ventas diario y mensual"
+          subtitle="Desempeño de ventas y productos más vendidos"
           icon={<AssessmentIcon />}
         />
 
@@ -222,6 +223,7 @@ export default function ReportsPage() {
           >
             <Tab label="Reporte Diario de Ventas" />
             <Tab label="Reporte Mensual de Ventas" />
+            <Tab label="Productos Más Vendidos" />
           </Tabs>
         </Box>
 
@@ -445,6 +447,11 @@ export default function ReportsPage() {
               </TableBody>
             </Table>
           </TableContainer>
+        </TabPanel>
+
+        {/* TAB 3: Productos Más Vendidos */}
+        <TabPanel value={tabValue} index={2}>
+          <TopProductsTab />
         </TabPanel>
       </Paper>
     </Box>

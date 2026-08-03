@@ -8,3 +8,4 @@ export * from './sell';
 export * from './area';
 export * from './validation';
 export * from './cashRegisterClosure';
+export * from './report';

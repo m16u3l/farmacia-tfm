@@ -50,6 +50,9 @@ export interface InventoryValidationItem {
   product_name?: string;
   batch_number?: string | null;
   expiry_date?: string | null;
+  // Umbrales propios del lote/producto; null = usar el global de configuración
+  expiry_alert_days?: number | null;
+  product_low_stock_threshold?: number | null;
 }
 
 export interface InventoryValidationWithItems extends InventoryValidation {
@@ -94,10 +97,12 @@ export interface ValidationAdjustmentResult {
   skipped: { validation_item_id: number; inventory_id: number | null; reason: string }[];
 }
 
-// Estado de cobertura por área (GET /api/inventory-validations/coverage):
-// validated: última validación conciliada dentro del período de vigencia.
-// due_soon:  vigente, pero le quedan pocos días.
-// overdue:   la última validación conciliada ya expiró.
+// Estado de cobertura por área (GET /api/inventory-validations/coverage). El
+// ciclo es mensual: cada área debe validarse dentro del mes en curso, antes del
+// día límite (validation_due_day).
+// validated: ya tiene una validación conciliada dentro del mes en curso.
+// due_soon:  pendiente del mes, pero aún dentro del plazo.
+// overdue:   pendiente y el plazo del mes ya venció.
 // never:     nunca tuvo una validación conciliada.
 // no_stock:  sin lotes con stock — no requiere conteo, excluida del %.
 export type AreaCoverageStatus = 'validated' | 'due_soon' | 'overdue' | 'never' | 'no_stock';
@@ -111,7 +116,8 @@ export interface AreaCoverage {
   last_validated_at: string | null;
   validated_by_name: string | null;
   days_since_validated: number | null;
-  days_remaining: number | null;
+  // La última validación conciliada cae dentro del mes en curso.
+  validated_this_period: boolean;
   // Hay una validación completada posterior a la última conciliada cuyos
   // ajustes al inventario aún no se aplicaron.
   has_pending_adjustments: boolean;
@@ -119,7 +125,12 @@ export interface AreaCoverage {
 }
 
 export interface ValidationCoverage {
-  validation_period_days: number;
+  // Día del mes hasta el que hay plazo para validar.
+  validation_due_day: number;
+  // Mes en curso, etiqueta legible ("agosto 2026").
+  period_label: string;
+  // Días que faltan para el día límite: 0 = hoy, negativo = plazo vencido.
+  days_until_due: number;
   total_areas: number;
   validated_areas: number;
   coverage_percent: number;

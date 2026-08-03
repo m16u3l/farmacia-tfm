@@ -11,7 +11,8 @@ import { getConfiguracionThresholds, ConfiguracionThresholds } from "@/lib/confi
 const ITEM_FILTERS: Record<string, (thresholds: ConfiguracionThresholds) => string> = {
   area: () => "i.area_id = $2",
   expiring: ({ expiry_alert_days }) =>
-    `i.expiry_date IS NOT NULL AND i.expiry_date >= CURRENT_DATE AND i.expiry_date <= CURRENT_DATE + INTERVAL '${expiry_alert_days} days'`,
+    `i.expiry_date IS NOT NULL AND i.expiry_date >= CURRENT_DATE
+     AND i.expiry_date <= CURRENT_DATE + (COALESCE(i.expiry_alert_days, ${expiry_alert_days}) || ' days')::interval`,
   expired: () => "i.expiry_date IS NOT NULL AND i.expiry_date < CURRENT_DATE",
   low_stock: ({ low_stock_threshold }) =>
     `i.quantity_available <= COALESCE(

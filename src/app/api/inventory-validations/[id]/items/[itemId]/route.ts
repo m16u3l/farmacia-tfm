@@ -58,6 +58,22 @@ export async function PUT(
         status = "inconsistent";
       }
 
+      // El diálogo de verificación viene prellenado con la fecha del lote, así
+      // que solo es una corrección si difiere de la que ya tiene el inventario:
+      // guardarla igual marcaría al ítem como discrepancia (ver coverage y
+      // apply-adjustments) aunque el conteo haya salido perfecto.
+      const expiryResult = await client.query(
+        `SELECT expiry_date FROM inventory WHERE inventory_id = $1`,
+        [item.inventory_id]
+      );
+      const systemExpiry = expiryResult.rows[0]?.expiry_date
+        ? new Date(expiryResult.rows[0].expiry_date).toISOString().split("T")[0]
+        : null;
+      const reportedExpiry = actual_expiry_date
+        ? new Date(actual_expiry_date).toISOString().split("T")[0]
+        : null;
+      const expiryCorrection = reportedExpiry === systemExpiry ? null : reportedExpiry;
+
       const session = await getSessionFromRequest(request);
       const result = await client.query(
         `UPDATE inventory_validation_items
@@ -67,7 +83,7 @@ export async function PUT(
          RETURNING *`,
         [
           actual_quantity,
-          actual_expiry_date || null,
+          expiryCorrection,
           status,
           notes || null,
           status === "confirmed" ? null : discrepancy_reason || null,
@@ -78,7 +94,7 @@ export async function PUT(
 
       await logAudit(session?.userId ?? null, "update", "inventory_validation_item", Number(params.itemId), {
         actual_quantity,
-        actual_expiry_date: actual_expiry_date || null,
+        actual_expiry_date: expiryCorrection,
         status,
       });
 

@@ -37,7 +37,15 @@ import { AddValidationItemInput, Inventory, InventoryArea, InventoryValidation, 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useValidations } from "@/hooks/useValidations";
+import { useConfiguracion } from "@/hooks/useConfiguracion";
 import { buildAreaOptions } from "@/utils/areaTree";
+import {
+  isExpired,
+  isAboutToExpire,
+  isLowStock,
+  resolveExpiryAlertDays,
+  resolveLowStockThreshold,
+} from "@/utils/stockAlerts";
 import { VALIDATION_ITEM_STATUS_LABELS, VALIDATION_TYPE_LABELS } from "@/utils/validationLabels";
 import { VerifyItemDialog } from "./_components/VerifyItemDialog";
 import { RemoveItemDialog } from "./_components/RemoveItemDialog";
@@ -82,6 +90,7 @@ export default function InventoryValidationsPage() {
 
   const { error, createSession, addItem, verifyItem, removeItem, completeSession, cancelSession, getAll, getSession, applyAdjustments } = useValidations();
   const { confirm, confirmDialog } = useConfirmDialog();
+  const { thresholds } = useConfiguracion();
   const verificationMode = activeValidation !== null;
 
   const notify = (message: string, severity: "success" | "error" | "info") =>
@@ -197,37 +206,43 @@ export default function InventoryValidationsPage() {
     return parts.length > 0 ? parts.join(" › ") : fallback || "";
   };
 
+  // Umbral propio del lote/producto si lo tiene, si no el global de Configuración
+  // (misma cascada que los COALESCE de las queries del servidor).
+  const expiryDaysOf = (own: number | null | undefined) =>
+    resolveExpiryAlertDays(own, thresholds.expiry_alert_days);
+  const lowStockThresholdOf = (own: number | null | undefined) =>
+    resolveLowStockThreshold(own, thresholds.low_stock_threshold);
+
   // Estado combinado (vencimiento + stock) a partir de los valores crudos —
   // reutilizado tanto por `inventory` (dashboard) como por los ítems de una
   // sesión de validación (que snapshotean expiry_date/expected_quantity).
-  const getStatus = (expiryDate: string | null | undefined, quantity: number) => {
-    const days = getDaysUntilExpiry(expiryDate);
-    const isExpired = typeof days === "number" && days < 0;
-    const isAboutToExpire = typeof days === "number" && days >= 0 && days <= 40;
-    const isLowStock = quantity <= 10;
-
-    if (isExpired) return { status: "expired", label: "VENCIDO", color: "error" };
-    if (isAboutToExpire) return { status: "expiring", label: "POR VENCER", color: "warning" };
-    if (isLowStock) return { status: "low", label: "BAJO STOCK", color: "warning" };
+  const getStatus = (
+    expiryDate: string | null | undefined,
+    quantity: number,
+    expiryAlertDays: number | null | undefined,
+    lowStockThreshold: number | null | undefined
+  ) => {
+    if (isExpired(expiryDate)) return { status: "expired", label: "VENCIDO", color: "error" };
+    if (isAboutToExpire(expiryDate, expiryDaysOf(expiryAlertDays)))
+      return { status: "expiring", label: "POR VENCER", color: "warning" };
+    if (isLowStock(quantity, lowStockThresholdOf(lowStockThreshold)))
+      return { status: "low", label: "BAJO STOCK", color: "warning" };
     return { status: "ok", label: "OK", color: "success" };
   };
 
-  const getInventoryStatus = (item: Inventory) => getStatus(item.expiry_date, item.quantity_available);
+  const getInventoryStatus = (item: Inventory) =>
+    getStatus(
+      item.expiry_date,
+      item.quantity_available,
+      item.expiry_alert_days,
+      item.product_low_stock_threshold
+    );
 
   // "2026-01-27T04:00:00.000Z" -> "2026-01-27", para comparar solo la fecha.
   const toDateOnly = (date: string | null | undefined) => (date ? date.split("T")[0] : null);
 
   const hasExpiryCorrection = (item: InventoryValidationItem) =>
     !!item.actual_expiry_date && toDateOnly(item.actual_expiry_date) !== toDateOnly(item.expiry_date);
-
-  // Helper: returns number of days until expiry (can be negative), or null if no valid expiry date
-  const getDaysUntilExpiry = (expiryDate: string | null | undefined): number | null => {
-    if (!expiryDate) return null;
-    const parsed = new Date(expiryDate);
-    if (isNaN(parsed.getTime())) return null;
-    const now = new Date();
-    return Math.ceil((parsed.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  };
 
   const handleStartVerification = async () => {
     if (validationType === "area" && !selectedValidationAreaId) {
@@ -521,16 +536,13 @@ export default function InventoryValidationsPage() {
     total: inventory.length,
     ok: inventory.filter((item) => getInventoryStatus(item).status === "ok").length,
     // Low stock should be counted regardless of expiry status
-    lowStock: inventory.filter((item) => item.quantity_available <= 10).length,
-    // Use days util to determine expiry states to avoid double-calling getInventoryStatus
-    expiring: inventory.filter((item) => {
-      const days = getDaysUntilExpiry(item.expiry_date);
-      return typeof days === "number" && days >= 0 && days <= 40;
-    }).length,
-    expired: inventory.filter((item) => {
-      const days = getDaysUntilExpiry(item.expiry_date);
-      return typeof days === "number" && days < 0;
-    }).length,
+    lowStock: inventory.filter((item) =>
+      isLowStock(item.quantity_available, lowStockThresholdOf(item.product_low_stock_threshold))
+    ).length,
+    expiring: inventory.filter((item) =>
+      isAboutToExpire(item.expiry_date, expiryDaysOf(item.expiry_alert_days))
+    ).length,
+    expired: inventory.filter((item) => isExpired(item.expiry_date)).length,
   };
 
   const discrepancyItems = reviewValidation
@@ -889,6 +901,10 @@ export default function InventoryValidationsPage() {
                 {!verificationMode &&
                   inventory.map((item) => {
                     const status = getInventoryStatus(item);
+                    const lowStock = isLowStock(
+                      item.quantity_available,
+                      lowStockThresholdOf(item.product_low_stock_threshold)
+                    );
                     return (
                       <TableRow
                         key={item.inventory_id}
@@ -902,8 +918,8 @@ export default function InventoryValidationsPage() {
                         <TableCell>
                           <Typography
                             sx={{
-                              color: item.quantity_available <= 10 ? "warning.main" : "inherit",
-                              fontWeight: item.quantity_available <= 10 ? "bold" : "normal",
+                              color: lowStock ? "warning.main" : "inherit",
+                              fontWeight: lowStock ? "bold" : "normal",
                             }}
                           >
                             {item.quantity_available}
@@ -930,7 +946,13 @@ export default function InventoryValidationsPage() {
                   activeValidation.items.map((item) => {
                     const status = getStatus(
                       item.actual_expiry_date ?? item.expiry_date,
-                      item.actual_quantity ?? item.expected_quantity
+                      item.actual_quantity ?? item.expected_quantity,
+                      item.expiry_alert_days,
+                      item.product_low_stock_threshold
+                    );
+                    const lowStock = isLowStock(
+                      item.expected_quantity,
+                      lowStockThresholdOf(item.product_low_stock_threshold)
                     );
                     const statusInfo = VALIDATION_ITEM_STATUS_LABELS[item.status];
 
@@ -948,8 +970,8 @@ export default function InventoryValidationsPage() {
                           <Box>
                             <Typography
                               sx={{
-                                color: item.expected_quantity <= 10 ? "warning.main" : "inherit",
-                                fontWeight: item.expected_quantity <= 10 ? "bold" : "normal",
+                                color: lowStock ? "warning.main" : "inherit",
+                                fontWeight: lowStock ? "bold" : "normal",
                               }}
                             >
                               {item.expected_quantity}

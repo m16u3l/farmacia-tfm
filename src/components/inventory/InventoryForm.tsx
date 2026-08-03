@@ -117,6 +117,23 @@ export function InventoryForm({
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
+                label="Días de alerta de vencimiento"
+                type="number"
+                fullWidth
+                inputProps={{ min: 0 }}
+                placeholder="Usar valor global"
+                helperText="Opcional. Vacío = usar los días configurados en Configuración."
+                value={formData.expiry_alert_days ?? ""}
+                onChange={(e) =>
+                  onChange(
+                    "expiry_alert_days",
+                    e.target.value === "" ? null : Number(e.target.value)
+                  )
+                }
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
                 label="Cantidad Disponible"
                 type="number"
                 fullWidth

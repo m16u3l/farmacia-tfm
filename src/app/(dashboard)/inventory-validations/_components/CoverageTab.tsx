@@ -22,21 +22,20 @@ import { buildAreaOptions } from "@/utils/areaTree";
 import { COVERAGE_STATUS_LABELS } from "@/utils/validationLabels";
 
 // Orden de urgencia para "Validar siguiente" y para el listado: primero las
-// nunca validadas, luego las vencidas (más antigua primero), luego las por
-// vencer (menos días restantes primero); las vigentes y sin stock al final.
+// nunca validadas, luego las que quedaron fuera de plazo y las pendientes del
+// mes (en ambos casos, la de validación más antigua primero); las ya validadas
+// este mes y las sin stock al final.
+const STATUS_URGENCY: Record<AreaCoverage["status"], number> = {
+  never: 0,
+  overdue: 1,
+  due_soon: 2,
+  validated: 3,
+  no_stock: 4,
+};
+
 function urgencyKey(area: AreaCoverage): number {
-  switch (area.status) {
-    case "never":
-      return 0;
-    case "overdue":
-      return 1 + (area.days_remaining ?? 0) / 10000;
-    case "due_soon":
-      return 2 + (area.days_remaining ?? 0) / 10000;
-    case "validated":
-      return 3 + (area.days_remaining ?? 0) / 10000;
-    default:
-      return 4;
-  }
+  // Más días sin validar = más urgente dentro del mismo estado.
+  return STATUS_URGENCY[area.status] - Math.min(area.days_since_validated ?? 0, 9999) / 10000;
 }
 
 interface CoverageTabProps {
@@ -99,8 +98,8 @@ export function CoverageTab({ areas, verificationMode, onStartValidation }: Cove
             </Typography>
             <Box sx={{ flex: 1, minWidth: 200 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                {coverage.validated_areas} de {coverage.total_areas} áreas con stock validadas en los
-                últimos {coverage.validation_period_days} días
+                {coverage.validated_areas} de {coverage.total_areas} áreas con stock validadas en{" "}
+                {coverage.period_label}
               </Typography>
               <LinearProgress
                 variant="determinate"
@@ -108,13 +107,25 @@ export function CoverageTab({ areas, verificationMode, onStartValidation }: Cove
                 color={coverage.fully_validated ? "success" : coverage.coverage_percent >= 50 ? "warning" : "error"}
                 sx={{ height: 10, borderRadius: 5 }}
               />
+              <Typography
+                variant="caption"
+                color={coverage.days_until_due < 0 ? "error.main" : "text.secondary"}
+                sx={{ display: "block", mt: 0.5 }}
+              >
+                Plazo: hasta el {coverage.validation_due_day} de {coverage.period_label} —{" "}
+                {coverage.days_until_due > 0
+                  ? `faltan ${coverage.days_until_due} día(s)`
+                  : coverage.days_until_due === 0
+                    ? "hoy es el último día"
+                    : `venció hace ${-coverage.days_until_due} día(s)`}
+              </Typography>
             </Box>
           </Box>
 
           {coverage.fully_validated ? (
             <Chip
               icon={<VerifiedIcon />}
-              label="Inventario 100% conciliado con la farmacia física"
+              label={`Inventario 100% conciliado con la farmacia física en ${coverage.period_label}`}
               color="success"
               sx={{ fontWeight: "bold" }}
             />
@@ -174,12 +185,14 @@ export function CoverageTab({ areas, verificationMode, onStartValidation }: Cove
                     )
                   )}
 
-                  {(area.status === "validated" || area.status === "due_soon") && (
-                    <Typography
-                      variant="body2"
-                      color={area.status === "due_soon" ? "warning.main" : "text.secondary"}
-                    >
-                      Vigente por {area.days_remaining} día(s) más
+                  {area.status === "due_soon" && (
+                    <Typography variant="body2" color="warning.main">
+                      Falta el conteo de {coverage.period_label}
+                    </Typography>
+                  )}
+                  {area.status === "overdue" && (
+                    <Typography variant="body2" color="error.main">
+                      Sin contar en {coverage.period_label}, el plazo ya venció
                     </Typography>
                   )}
 

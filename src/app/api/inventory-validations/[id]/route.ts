@@ -36,7 +36,9 @@ export async function GET(
           vi.*,
           p.name as product_name,
           i.batch_number,
-          i.expiry_date
+          i.expiry_date,
+          i.expiry_alert_days,
+          p.low_stock_threshold as product_low_stock_threshold
         FROM inventory_validation_items vi
         LEFT JOIN inventory i ON vi.inventory_id = i.inventory_id
         LEFT JOIN products p ON i.product_id = p.product_id

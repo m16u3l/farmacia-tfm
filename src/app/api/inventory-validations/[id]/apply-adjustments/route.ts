@@ -50,17 +50,20 @@ export async function POST(
     }
 
     // Ítems a ajustar: los verificados con discrepancia de cantidad y/o con una
-    // fecha de vencimiento corregida, cuyo lote de inventario todavía existe.
-    // Los 'pending' quedan excluidos (nunca se ajustan, no hay evidencia física).
+    // fecha de vencimiento corregida (distinta de la del lote), cuyo lote de
+    // inventario todavía existe. Los 'pending' quedan excluidos (nunca se
+    // ajustan, no hay evidencia física).
     const itemsResult = await client.query(
-      `SELECT validation_item_id, inventory_id, expected_quantity, actual_quantity,
-              actual_expiry_date, status
-       FROM inventory_validation_items
-       WHERE validation_id = $1
-         AND inventory_id IS NOT NULL
-         AND (status IN ('inconsistent', 'not_found') OR actual_expiry_date IS NOT NULL)
-       ORDER BY validation_item_id
-       FOR UPDATE`,
+      `SELECT vi.validation_item_id, vi.inventory_id, vi.expected_quantity, vi.actual_quantity,
+              vi.actual_expiry_date, vi.status
+       FROM inventory_validation_items vi
+       LEFT JOIN inventory i ON i.inventory_id = vi.inventory_id
+       WHERE vi.validation_id = $1
+         AND vi.inventory_id IS NOT NULL
+         AND (vi.status IN ('inconsistent', 'not_found')
+              OR (vi.actual_expiry_date IS NOT NULL AND vi.actual_expiry_date IS DISTINCT FROM i.expiry_date))
+       ORDER BY vi.validation_item_id
+       FOR UPDATE OF vi`,
       [validationId]
     );
 

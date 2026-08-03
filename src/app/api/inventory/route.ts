@@ -32,6 +32,7 @@ export async function GET() {
           p.concentration as product_concentration,
           p.barcode as product_barcode,
           p.sale_control as product_sale_control,
+          p.low_stock_threshold as product_low_stock_threshold,
           a.name as area_name,
           ap.full_path as area_full_path
         FROM inventory i
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
       product_id,
       batch_number,
       expiry_date,
+      expiry_alert_days,
       quantity_available,
       area_id,
       purchase_price,
@@ -83,11 +85,11 @@ export async function POST(request: NextRequest) {
     try {
       const result = await client.query(`
         INSERT INTO inventory (
-          product_id, batch_number, expiry_date, quantity_available,
+          product_id, batch_number, expiry_date, expiry_alert_days, quantity_available,
           area_id, purchase_price, sale_price, created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING *`,
-        [product_id, batch_number, expiry_date, quantity_available, area_id, purchase_price, sale_price, session?.userId ?? null]
+        [product_id, batch_number, expiry_date, expiry_alert_days ?? null, quantity_available, area_id, purchase_price, sale_price, session?.userId ?? null]
       );
 
       await logAudit(session?.userId ?? null, "create", "inventory", result.rows[0].inventory_id, { product_id, quantity_available });
