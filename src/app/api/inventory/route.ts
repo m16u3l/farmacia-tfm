@@ -26,6 +26,7 @@ export async function GET() {
           i.*,
           p.name as product_name,
           p.description as product_description,
+          p.possible_uses as product_possible_uses,
           p.category as product_category,
           p.laboratory as product_laboratory,
           p.active_ingredient as product_active_ingredient,

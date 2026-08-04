@@ -16,6 +16,7 @@ export interface Inventory {
   product?: Product;  // For joined queries
   product_name?: string;  // For joined queries
   product_description?: string;  // For joined queries
+  product_possible_uses?: string;  // For joined queries
   product_category?: string;  // For joined queries
   product_laboratory?: string | null;  // For joined queries
   product_active_ingredient?: string | null;  // For joined queries

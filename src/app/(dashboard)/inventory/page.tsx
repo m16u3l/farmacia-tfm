@@ -1,6 +1,6 @@
 "use client";
 import { formatDate } from "@/utils/dateUtils";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -30,19 +30,20 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningIcon from "@mui/icons-material/Warning";
-import EventBusyIcon from "@mui/icons-material/EventBusy";
 import InventoryIconOutlined from "@mui/icons-material/Inventory2Outlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import SearchIcon from "@mui/icons-material/Search";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import { Inventory, InventoryArea, InventoryFormData, Product, TransferReason } from "@/types";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
+import { InventoryDetailDialog } from "@/components/inventory/InventoryDetailDialog";
 import { TransferDialog } from "@/components/inventory/TransferDialog";
 import { useInventory } from "@/hooks/useInventory";
 import { useConfiguracion } from "@/hooks/useConfiguracion";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useConfirmDialog } from "@/components/common/ConfirmDialog";
 import { GridEmptyState } from "@/components/common/GridEmptyState";
-import { buildAreaOptions } from "@/utils/areaTree";
+import { buildAreaOptions, getAreaSubtreeIds } from "@/utils/areaTree";
 import { smartSearch } from "@/utils/smartSearch";
 import { fluidFontSize } from "@/utils/fluidType";
 import {
@@ -75,6 +76,7 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
   const [formData, setFormData] = useState<InventoryFormData>(EMPTY_FORM);
   const [transferItem, setTransferItem] = useState<Inventory | null>(null);
+  const [detailItem, setDetailItem] = useState<Inventory | null>(null);
   const [showOutOfStock, setShowOutOfStock] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [areaFilter, setAreaFilter] = useState<string>("all");
@@ -266,10 +268,13 @@ export default function InventoryPage() {
     }
   };
 
-  const getProductName = (productId: number) => {
-    const product = products.find(p => p.product_id == productId);
-    return product ? product.name : `${productId}`;
-  };
+  const getProductName = useCallback(
+    (productId: number) => {
+      const product = products.find(p => p.product_id == productId);
+      return product ? product.name : `${productId}`;
+    },
+    [products]
+  );
 
   const getItemLocation = (item: Inventory) => item.area_full_path || item.area_name || "Sin asignar";
 
@@ -288,9 +293,25 @@ export default function InventoryPage() {
       resolveExpiryAlertDays(item.expiry_alert_days, thresholds.expiry_alert_days)
     );
 
-  const lowStockItems = inventory.filter(isItemLowStock);
-  const expiringItems = inventory.filter(item => item.quantity_available > 0 && isItemAboutToExpire(item));
-  const expiredItems = inventory.filter(item => item.quantity_available > 0 && isExpired(item.expiry_date));
+  const areaOptions = useMemo(() => buildAreaOptions(areas), [areas]);
+
+  // Filtrar por un área incluye sus subáreas (un estante muestra sus apartados).
+  const areaScopeIds = useMemo(
+    () => (areaFilter === "all" ? null : getAreaSubtreeIds(areas, Number(areaFilter))),
+    [areaFilter, areas]
+  );
+  const areaScopedInventory = useMemo(
+    () =>
+      areaScopeIds
+        ? inventory.filter(item => item.area_id != null && areaScopeIds.has(item.area_id))
+        : inventory,
+    [inventory, areaScopeIds]
+  );
+
+  // Las alertas respetan el filtro de área (no el buscador).
+  const lowStockItems = areaScopedInventory.filter(isItemLowStock);
+  const expiringItems = areaScopedInventory.filter(item => item.quantity_available > 0 && isItemAboutToExpire(item));
+  const expiredItems = areaScopedInventory.filter(item => item.quantity_available > 0 && isExpired(item.expiry_date));
 
   const ALERT_ROW_LIMIT = 5;
 
@@ -317,12 +338,22 @@ export default function InventoryPage() {
             {visible.map((item) => (
               <Box
                 key={item.inventory_id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setDetailItem(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDetailItem(item);
+                  }
+                }}
                 sx={{
                   p: 1,
                   borderRadius: 1,
                   bgcolor: "background.paper",
                   border: "1px solid",
                   borderColor: "divider",
+                  cursor: "pointer",
                 }}
               >
                 <Typography sx={{ fontWeight: 600, fontSize: fluidFontSize(0.75, 0.85) }}>
@@ -362,7 +393,12 @@ export default function InventoryPage() {
             </TableHead>
             <TableBody>
               {visible.map((item) => (
-                <TableRow key={item.inventory_id}>
+                <TableRow
+                  key={item.inventory_id}
+                  hover
+                  onClick={() => setDetailItem(item)}
+                  sx={{ cursor: "pointer" }}
+                >
                   <TableCell sx={{ fontSize: fluidFontSize(0.7, 0.85) }}>
                     {item.product_name || getProductName(item.product_id)}
                   </TableCell>
@@ -384,21 +420,27 @@ export default function InventoryPage() {
     );
   };
 
-  const outOfStockCount = inventory.filter(item => item.quantity_available === 0).length;
-  const filteredInventory = inventory.filter((item) => {
-    if (!showOutOfStock && item.quantity_available <= 0) return false;
-    if (areaFilter !== "all" && String(item.area_id ?? "") !== areaFilter) return false;
-    return true;
-  });
-  const visibleInventory = smartSearch(filteredInventory, searchText, (item) => [
-    item.product_name || getProductName(item.product_id),
-    item.product_active_ingredient,
-    item.batch_number,
-    item.product_barcode,
-    item.product_laboratory,
-    item.product_concentration,
-    item.product_category,
-  ]);
+  const outOfStockCount = areaScopedInventory.filter(item => item.quantity_available === 0).length;
+  const filteredInventory = useMemo(
+    () => areaScopedInventory.filter((item) => showOutOfStock || item.quantity_available > 0),
+    [areaScopedInventory, showOutOfStock]
+  );
+  // useMemo porque smartSearch recorre además dos campos TEXT largos por lote.
+  const visibleInventory = useMemo(
+    () =>
+      smartSearch(filteredInventory, searchText, (item) => [
+        item.product_name || getProductName(item.product_id),
+        item.product_active_ingredient,
+        item.batch_number,
+        item.product_barcode,
+        item.product_laboratory,
+        item.product_concentration,
+        item.product_category,
+        item.product_description,
+        item.product_possible_uses,
+      ]),
+    [filteredInventory, searchText, getProductName]
+  );
 
   const columns: GridColDef[] = [
     { field: "inventory_id", headerName: "ID", flex: 0.5, minWidth: 50, maxWidth: 70 },
@@ -489,11 +531,11 @@ export default function InventoryPage() {
       ),
     },
     {
-      field: "area_name",
+      field: "area_full_path",
       headerName: "Ubicación",
-      flex: 1,
-      minWidth: 80,
-      valueFormatter: (params) => params || "Sin asignar",
+      flex: 1.5,
+      minWidth: 160,
+      valueGetter: (params, row) => params || row.area_name || "Sin asignar",
     },
     {
       field: "purchase_price",
@@ -512,10 +554,19 @@ export default function InventoryPage() {
     {
       field: "actions",
       headerName: "Acciones",
-      width: 160,
+      width: 200,
       sortable: false,
       renderCell: (params: GridRenderCellParams) => (
         <Box>
+          <IconButton
+            aria-label="Ver detalle del lote"
+            size="small"
+            onClick={() => setDetailItem(params.row)}
+            color="default"
+            title="Ver detalle"
+          >
+            <VisibilityIcon />
+          </IconButton>
           <IconButton
             aria-label="Transferir lote"
             size="small"
@@ -575,10 +626,10 @@ export default function InventoryPage() {
             {expiredItems.length > 0 && (
               <Alert
                 severity="error"
-                icon={<WarningIcon />}
+                icon={false}
                 sx={{
                   fontSize: fluidFontSize(0.75, 0.875),
-                  "& .MuiAlert-message": { width: "100%" },
+                  "& .MuiAlert-message": { width: "100%", py: 0 },
                 }}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
@@ -591,10 +642,10 @@ export default function InventoryPage() {
             {lowStockItems.length > 0 && (
               <Alert
                 severity="warning"
-                icon={<WarningIcon />}
+                icon={false}
                 sx={{
                   fontSize: fluidFontSize(0.75, 0.875),
-                  "& .MuiAlert-message": { width: "100%" }
+                  "& .MuiAlert-message": { width: "100%", py: 0 }
                 }}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
@@ -607,10 +658,10 @@ export default function InventoryPage() {
             {expiringItems.length > 0 && (
               <Alert
                 severity="warning"
-                icon={<EventBusyIcon />}
+                icon={false}
                 sx={{
                   fontSize: fluidFontSize(0.75, 0.875),
-                  "& .MuiAlert-message": { width: "100%" }
+                  "& .MuiAlert-message": { width: "100%", py: 0 }
                 }}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
@@ -634,7 +685,7 @@ export default function InventoryPage() {
         >
           <TextField
             size="small"
-            placeholder="Buscar por nombre, principio activo, lote, código…"
+            placeholder="Buscar por nombre, principio activo, uso, lote, código…"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             InputProps={{
@@ -652,12 +703,20 @@ export default function InventoryPage() {
             label="Área"
             value={areaFilter}
             onChange={(e) => setAreaFilter(e.target.value)}
-            sx={{ flex: { xs: "1 1 auto", sm: "0 1 200px" }, width: { xs: "100%", sm: "auto" }, minWidth: { sm: 150 } }}
+            SelectProps={{
+              // El valor seleccionado muestra la ruta completa ("Almacén › Estante A › 3")
+              // para no perder de vista el área padre de una subárea.
+              renderValue: (value) =>
+                value === "all"
+                  ? "Todas las áreas"
+                  : areaOptions.find(({ area }) => String(area.area_id) === String(value))?.label ?? "",
+            }}
+            sx={{ flex: { xs: "1 1 auto", sm: "0 1 240px" }, width: { xs: "100%", sm: "auto" }, minWidth: { sm: 180 } }}
           >
             <MenuItem value="all">Todas las áreas</MenuItem>
-            {buildAreaOptions(areas).map(({ area, depth }) => (
-              <MenuItem key={area.area_id} value={String(area.area_id)}>
-                {`${"— ".repeat(depth)}${area.name}`}
+            {areaOptions.map(({ area, depth }) => (
+              <MenuItem key={area.area_id} value={String(area.area_id)} sx={{ pl: 2 + depth * 2 }}>
+                {area.name}
               </MenuItem>
             ))}
           </TextField>
@@ -701,7 +760,7 @@ export default function InventoryPage() {
                     inventory_id: false,
                     batch_number: false,
                     expiry_date: false,
-                    area_name: false,
+                    area_full_path: false,
                     purchase_price: false,
                     sale_price: false,
                   }
@@ -743,6 +802,21 @@ export default function InventoryPage() {
         onClose={() => setOpenDialog(false)}
         onSubmit={handleSubmit}
         onChange={handleFormChange}
+      />
+
+      <InventoryDetailDialog
+        open={!!detailItem}
+        item={detailItem}
+        thresholds={thresholds}
+        onClose={() => setDetailItem(null)}
+        onEdit={(item) => {
+          setDetailItem(null);
+          handleEdit(item);
+        }}
+        onTransfer={(item) => {
+          setDetailItem(null);
+          handleOpenTransfer(item);
+        }}
       />
 
       <TransferDialog

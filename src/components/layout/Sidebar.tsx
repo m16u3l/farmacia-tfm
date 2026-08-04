@@ -117,7 +117,19 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
         </Box>
       </DrawerHeader>
 
-      <Box sx={{ flexGrow: 1, overflowY: "auto", py: 1 }}>
+      <Box
+        sx={{
+          flexGrow: 1,
+          // minHeight: 0 para que el hijo flexible pueda encogerse y hacer
+          // scroll; overflowX oculto porque "auto" en un eje convierte el otro
+          // en scrollable y el menú se desplazaba también en horizontal.
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          overscrollBehavior: "contain",
+          py: 1,
+        }}
+      >
         {visibleGroups.map((group) => (
           <Box key={group.label} sx={{ mb: 1 }}>
             <Typography
@@ -155,6 +167,9 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
                       borderRadius: 2,
                       mx: 1.5,
                       mb: 0.25,
+                      // width auto: el ancho 100% por defecto de ListItem más
+                      // los márgenes laterales desbordaba el drawer.
+                      width: "auto",
                       transition: "background-color 0.15s ease",
                     }}
                   >
@@ -248,6 +263,7 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
             width: DRAWER_WIDTH,
+            overflowX: "hidden",
           },
         }}
       >
@@ -264,6 +280,7 @@ export function Sidebar({ mobileOpen = false, onMobileToggle }: SidebarProps = {
           "& .MuiDrawer-paper": {
             width: DRAWER_WIDTH,
             boxSizing: "border-box",
+            overflowX: "hidden",
           },
         }}
       >

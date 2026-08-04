@@ -8,14 +8,23 @@ import { getConfiguracionThresholds, ConfiguracionThresholds } from "@/lib/confi
 // area/expired no dependen de configuración; expiring/low_stock sí, y su
 // umbral se interpola directamente (no como parámetro $N) porque ya viene
 // validado como entero desde getConfiguracionThresholds, nunca de un usuario.
+//
+// Las tres validaciones por alerta exigen quantity_available > 0: un lote
+// agotado ya no está en el estante, así que no hay nada que contar (y sin ese
+// filtro "bajo stock" arrastraba TODOS los agotados, porque 0 <= cualquier
+// umbral). La validación por área sí los conserva: sirven para detectar
+// unidades físicas de un lote que el sistema daba por agotado.
 const ITEM_FILTERS: Record<string, (thresholds: ConfiguracionThresholds) => string> = {
   area: () => "i.area_id = $2",
   expiring: ({ expiry_alert_days }) =>
-    `i.expiry_date IS NOT NULL AND i.expiry_date >= CURRENT_DATE
+    `i.quantity_available > 0
+     AND i.expiry_date IS NOT NULL AND i.expiry_date >= CURRENT_DATE
      AND i.expiry_date <= CURRENT_DATE + (COALESCE(i.expiry_alert_days, ${expiry_alert_days}) || ' days')::interval`,
-  expired: () => "i.expiry_date IS NOT NULL AND i.expiry_date < CURRENT_DATE",
+  expired: () =>
+    "i.quantity_available > 0 AND i.expiry_date IS NOT NULL AND i.expiry_date < CURRENT_DATE",
   low_stock: ({ low_stock_threshold }) =>
-    `i.quantity_available <= COALESCE(
+    `i.quantity_available > 0
+     AND i.quantity_available <= COALESCE(
        (SELECT p.low_stock_threshold FROM products p WHERE p.product_id = i.product_id),
        ${low_stock_threshold}
      )`,

@@ -37,3 +37,28 @@ export function buildAreaOptions(areas: InventoryArea[], excludeId?: number): Ar
   walk(null, 0, '');
   return options;
 }
+
+/**
+ * Devuelve el id del área más los de todos sus descendientes (estante → apartados),
+ * para poder filtrar por un área y ver también lo que hay en sus subáreas.
+ */
+export function getAreaSubtreeIds(areas: InventoryArea[], rootId: number): Set<number> {
+  const byParent = new Map<number | null, InventoryArea[]>();
+  for (const area of areas) {
+    const parentKey = area.parent_area_id ?? null;
+    if (!byParent.has(parentKey)) byParent.set(parentKey, []);
+    byParent.get(parentKey)!.push(area);
+  }
+
+  const ids = new Set<number>([rootId]);
+  const queue: number[] = [rootId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    for (const child of byParent.get(current) || []) {
+      if (ids.has(child.area_id)) continue; // corta ciclos
+      ids.add(child.area_id);
+      queue.push(child.area_id);
+    }
+  }
+  return ids;
+}

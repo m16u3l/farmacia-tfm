@@ -210,6 +210,7 @@ export default function ProductsPage() {
     product.concentration,
     product.category,
     product.description,
+    product.possible_uses,
   ]);
 
   const columns: GridColDef[] = [
@@ -324,7 +325,7 @@ export default function ProductsPage() {
         <Box sx={{ display: "flex", gap: 1.5, mb: 1, flexWrap: "wrap", alignItems: "center" }}>
           <TextField
             size="small"
-            placeholder="Buscar por nombre, principio activo, laboratorio, código…"
+            placeholder="Buscar por nombre, principio activo, uso, laboratorio, código…"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             InputProps={{

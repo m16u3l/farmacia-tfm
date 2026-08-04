@@ -206,6 +206,11 @@ export default function InventoryValidationsPage() {
     return parts.length > 0 ? parts.join(" › ") : fallback || "";
   };
 
+  // Los lotes agotados quedan fuera del panel de estado y de sus alertas: no
+  // están en el estante, así que no se cuentan como bajo stock ni vencidos
+  // (mismo criterio que los ITEM_FILTERS de /api/inventory-validations).
+  const activeInventory = inventory.filter((item) => item.quantity_available > 0);
+
   // Umbral propio del lote/producto si lo tiene, si no el global de Configuración
   // (misma cascada que los COALESCE de las queries del servidor).
   const expiryDaysOf = (own: number | null | undefined) =>
@@ -222,6 +227,9 @@ export default function InventoryValidationsPage() {
     expiryAlertDays: number | null | undefined,
     lowStockThreshold: number | null | undefined
   ) => {
+    // Un lote agotado no se evalúa por vencimiento ni por umbral: ya no está en
+    // el estante. Antes caía en "BAJO STOCK" porque 0 <= cualquier umbral.
+    if (quantity <= 0) return { status: "depleted", label: "AGOTADO", color: "default" };
     if (isExpired(expiryDate)) return { status: "expired", label: "VENCIDO", color: "error" };
     if (isAboutToExpire(expiryDate, expiryDaysOf(expiryAlertDays)))
       return { status: "expiring", label: "POR VENCER", color: "warning" };
@@ -506,7 +514,7 @@ export default function InventoryValidationsPage() {
   const handleExportInventory = () => {
     const csvContent = [
       ["Producto", "Lote", "Cantidad", "Vencimiento", "Estado"],
-      ...inventory.map((item) => {
+      ...activeInventory.map((item) => {
         const status = getInventoryStatus(item);
         return [
           getProductName(item.product_id),
@@ -533,16 +541,16 @@ export default function InventoryValidationsPage() {
   };
 
   const inventoryStats = {
-    total: inventory.length,
-    ok: inventory.filter((item) => getInventoryStatus(item).status === "ok").length,
+    total: activeInventory.length,
+    ok: activeInventory.filter((item) => getInventoryStatus(item).status === "ok").length,
     // Low stock should be counted regardless of expiry status
-    lowStock: inventory.filter((item) =>
+    lowStock: activeInventory.filter((item) =>
       isLowStock(item.quantity_available, lowStockThresholdOf(item.product_low_stock_threshold))
     ).length,
-    expiring: inventory.filter((item) =>
+    expiring: activeInventory.filter((item) =>
       isAboutToExpire(item.expiry_date, expiryDaysOf(item.expiry_alert_days))
     ).length,
-    expired: inventory.filter((item) => isExpired(item.expiry_date)).length,
+    expired: activeInventory.filter((item) => isExpired(item.expiry_date)).length,
   };
 
   const discrepancyItems = reviewValidation
@@ -687,7 +695,7 @@ export default function InventoryValidationsPage() {
                 <Card>
                   <CardContent>
                     <Typography color="textSecondary" gutterBottom variant="body2">
-                      Total Items
+                      Lotes con Stock
                     </Typography>
                     <Typography variant="h4">{inventoryStats.total}</Typography>
                   </CardContent>
@@ -899,7 +907,7 @@ export default function InventoryValidationsPage() {
               </TableHead>
               <TableBody>
                 {!verificationMode &&
-                  inventory.map((item) => {
+                  activeInventory.map((item) => {
                     const status = getInventoryStatus(item);
                     const lowStock = isLowStock(
                       item.quantity_available,
@@ -950,10 +958,12 @@ export default function InventoryValidationsPage() {
                       item.expiry_alert_days,
                       item.product_low_stock_threshold
                     );
-                    const lowStock = isLowStock(
-                      item.expected_quantity,
-                      lowStockThresholdOf(item.product_low_stock_threshold)
-                    );
+                    const lowStock =
+                      item.expected_quantity > 0 &&
+                      isLowStock(
+                        item.expected_quantity,
+                        lowStockThresholdOf(item.product_low_stock_threshold)
+                      );
                     const statusInfo = VALIDATION_ITEM_STATUS_LABELS[item.status];
 
                     return (

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Paper, Typography, Grid, Card, CardActionArea, CardContent, Skeleton } from "@mui/material";
+import { Box, Paper, Typography, Card, CardActionArea, Skeleton } from "@mui/material";
 import StorefrontIcon from "@mui/icons-material/StorefrontOutlined";
-import InventoryIcon from "@mui/icons-material/Inventory2Outlined";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSaleOutlined";
 import LocalMallIcon from "@mui/icons-material/LocalMallOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmberOutlined";
@@ -11,6 +10,8 @@ import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import DashboardIcon from "@mui/icons-material/SpaceDashboardOutlined";
+import { fluidFontSize } from "@/utils/fluidType";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface Stats {
   products: number;
@@ -30,6 +31,7 @@ export default function DashboardHomePage() {
     validationCoverage: null,
   });
   const [loading, setLoading] = useState(true);
+  const { user } = useCurrentUser();
 
   useEffect(() => {
     const load = async () => {
@@ -106,72 +108,75 @@ export default function DashboardHomePage() {
 
   return (
     <Box sx={{ width: "100%", height: "100%" }}>
-      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
         <PageHeader
           title="Panel de BioFarm"
-          subtitle="Resumen general de la operación de la farmacia"
+          subtitle={
+            user
+              ? `Hola, ${user.first_name} — resumen general de la operación`
+              : "Resumen general de la operación de la farmacia"
+          }
           icon={<DashboardIcon />}
         />
 
-        <Grid container spacing={2}>
+        <Box
+          sx={{
+            display: "grid",
+            gap: { xs: 1.25, sm: 2 },
+            gridTemplateColumns: {
+              xs: "repeat(2, minmax(0, 1fr))",
+              sm: "repeat(3, minmax(0, 1fr))",
+              lg: `repeat(${cards.length}, minmax(0, 1fr))`,
+            },
+          }}
+        >
           {cards.map((card) => (
-            <Grid item xs={12} sm={6} md={cards.length > 4 ? 2.4 : 3} key={card.label}>
-              <Card variant="outlined">
-                <CardActionArea component={Link} href={card.href}>
-                  <CardContent>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: 40,
-                        height: 40,
-                        borderRadius: 2,
-                        bgcolor: `${card.color}1A`,
-                        color: card.color,
-                        mb: 1.5,
-                      }}
-                    >
-                      {card.icon}
-                    </Box>
-                    <Typography variant="h4" sx={{ fontSize: "1.75rem" }}>
-                      {loading ? <Skeleton width={56} /> : card.value}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {card.label}
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
-            </Grid>
+            <Card key={card.label} variant="outlined" sx={{ height: "100%" }}>
+              <CardActionArea
+                component={Link}
+                href={card.href}
+                sx={{
+                  height: "100%",
+                  p: { xs: 1.5, sm: 2 },
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 0.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: { xs: 34, sm: 40 },
+                    height: { xs: 34, sm: 40 },
+                    borderRadius: 2,
+                    bgcolor: `${card.color}1A`,
+                    color: card.color,
+                    mb: { xs: 0.5, sm: 1 },
+                    "& svg": { fontSize: { xs: 20, sm: 24 } },
+                  }}
+                >
+                  {card.icon}
+                </Box>
+                <Typography
+                  variant="h4"
+                  sx={{ fontSize: fluidFontSize(1.4, 1.75), lineHeight: 1.1 }}
+                >
+                  {loading ? <Skeleton width={56} /> : card.value}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" }, lineHeight: 1.3 }}
+                >
+                  {card.label}
+                </Typography>
+              </CardActionArea>
+            </Card>
           ))}
-        </Grid>
-      </Paper>
-
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Accesos rápidos
-        </Typography>
-        <Grid container spacing={1.5}>
-          {[
-            { label: "Inventario", icon: <InventoryIcon />, href: "/inventory" },
-            { label: "Órdenes de compra", icon: <LocalMallIcon />, href: "/orders" },
-            { label: "Reportes", icon: <WarningAmberIcon />, href: "/reports" },
-          ].map((item) => (
-            <Grid item xs={12} sm={4} key={item.label}>
-              <Card variant="outlined">
-                <CardActionArea component={Link} href={item.href} sx={{ p: 1.5 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <Box sx={{ color: "primary.main", display: "flex" }}>{item.icon}</Box>
-                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                      {item.label}
-                    </Typography>
-                  </Box>
-                </CardActionArea>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        </Box>
       </Paper>
     </Box>
   );
